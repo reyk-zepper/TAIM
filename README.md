@@ -115,16 +115,25 @@ Everything is stored in human-readable formats: Markdown, YAML, SQLite. No black
                            │ REST API / WebSocket
                            ▼
 ┌──────────────────────────────────────────────────────────────┐
-│                   INTENT INTERPRETER                          │
-│  Natural Language → Structured Commands                       │
-│  Smart Defaults → Fill missing parameters                     │
-│  User Memory → Enrich context from experience                 │
+│              TWO-STAGE INTENT INTERPRETER                     │
+│                                                              │
+│  Stage 1: Quick Classification (Tier 3, cheap)               │
+│  → Categorize: new task? confirmation? status query?         │
+│  → Handles 60-70% of messages instantly                      │
+│                                                              │
+│  Stage 2: Deep Understanding (Tier 2, when needed)           │
+│  → Extract parameters, constraints, missing info             │
+│  → Enrich with user memory and preferences                   │
 └──────────────────────────┬───────────────────────────────────┘
                            ▼
 ┌──────────────────────────────────────────────────────────────┐
 │                     ORCHESTRATOR                              │
+│                                                              │
 │  Agent Registry · Team Composer · Heartbeat Manager           │
-│  Task Manager · Agent Executor                                │
+│  Task Manager · Agent State Machines                         │
+│                                                              │
+│  Orchestration Patterns:                                     │
+│  Sequential · Parallel · Pipeline · Hierarchical             │
 └──────────────────────────┬───────────────────────────────────┘
                            │
              ┌─────────────┼──────────────┐
@@ -132,11 +141,18 @@ Everything is stored in human-readable formats: Markdown, YAML, SQLite. No black
 ┌─────────────────┐ ┌───────────┐ ┌──────────────┐
 │   TAIM BRAIN    │ │   TAIM    │ │  TAIM RULES  │
 │                 │ │   ROUTER  │ │   ENGINE     │
-│ Agent Memory    │ │           │ │              │
-│ (claudianX)     │ │ Multi-LLM │ │ Compliance   │
-│                 │ │ Failover  │ │ profiles,    │
-│ Compiled        │ │ Model     │ │ approval     │
-│ Knowledge       │ │ Tiering   │ │ gates        │
+│ Three-Layer     │ │           │ │              │
+│ Memory:         │ │ Multi-LLM │ │ Compliance   │
+│ Hot (session)   │ │ Failover  │ │ profiles,    │
+│ Warm (prefs)    │ │ Model     │ │ approval     │
+│ Cold (history)  │ │ Tiering   │ │ gates        │
+│                 │ │           │ │              │
+│ Token-Budgeted  │ │ Error-    │ │              │
+│ Context         │ │ Type-     │ │              │
+│ Assembly        │ │ Aware     │ │              │
+│                 │ │ Handling  │ │              │
+│ Compiled        │ │           │ │              │
+│ Knowledge       │ │           │ │              │
 │ (noRAG)         │ │           │ │              │
 └─────────────────┘ └───────────┘ └──────────────┘
 ```
@@ -175,16 +191,31 @@ The fundamental shift: **AI learns every user, not every user learns AI.** A beg
 ### Conversation-First Architecture
 Not a chatbot bolted onto a config tool. The entire system is designed around natural language interaction. The Intent Interpreter translates plain speech into structured orchestration commands. Smart Defaults fill in everything the user doesn't specify. Guided Onboarding replaces setup wizards with a conversation.
 
+### Two-Stage Intent Interpretation
+Most systems use a single LLM call to understand user input. TAIM uses two stages: a fast, cheap classification (Tier 3) that handles 60-70% of messages instantly, and a deep understanding stage (Tier 2) that only activates for complex requests. This mirrors how humans process requests — first categorize, then analyze. The result: ~40% lower interpreter costs with better accuracy where it matters.
+
+### Agents as State Machines
+Every agent runs as an explicit state machine: `PLANNING → EXECUTING → REVIEWING → ITERATING → DONE`. Each state has its own optimized prompt — a "plan your approach" prompt is fundamentally different from a "review your result" prompt. This makes agents debuggable (see what state they're in), controllable (heartbeat can intervene per state), and resumable (state serializes to disk for crash recovery).
+
+### Token-Budgeted Context Assembly
+Every agent gets a token budget for its context. The Context Assembler prioritizes ruthlessly: task description first, then rules, then relevant memory, then examples — never exceeding the budget. This is fundamentally different from RAG: TAIM selects by relevance to task + agent role + user preferences, not by semantic similarity. No vectors needed.
+
+### Three-Temperature Memory
+Memory is organized in three layers: **Hot** (current session, always in RAM), **Warm** (user preferences, loaded on demand via INDEX.md), and **Cold** (historical data, accessed only when needed). Memory cost scales with relevance, not with total memory size.
+
 ### Intelligent Model Tiering
 TAIM automatically selects the right model for the right task:
-- **Tier 1 (Premium):** Complex reasoning, architecture, strategy → Claude Sonnet, GPT-4o
-- **Tier 2 (Standard):** Code generation, text processing → Claude Haiku, GPT-4o-mini
-- **Tier 3 (Economy):** Classification, formatting, routing → Local models
+- **Tier 1 (Premium):** Complex reasoning, architecture, strategy
+- **Tier 2 (Standard):** Code generation, text processing, analysis
+- **Tier 3 (Economy):** Classification, formatting, routing
 
 The user never needs to know about tiering. Power users can override.
 
-### Transparent Failover
-When Provider A hits its limit, TAIM automatically switches to Provider B. Anthropic exhausted? → OpenAI. OpenAI exhausted? → Local Ollama models ($0 fallback). Zero disruption.
+### Transparent Failover with Error-Type Awareness
+Not just "retry then failover." TAIM distinguishes error types: rate limits get retries, safety filters get prompt adjustments, bad formats get format reminders, low quality gets model escalation. Different errors need different responses. When Provider A hits its limit, the router switches transparently to Provider B. All providers down? Local Ollama at $0 cost.
+
+### Prompts as First-Class Citizens
+System prompts are not hardcoded strings — they're versioned YAML files in the TAIM Vault. Editable, auditable, improvable without code changes. This is the foundation for the self-learning system: Phase 2's Learning Loop optimizes prompts, not code. The prompts are the product.
 
 ### Self-Learning Memory
 Based on the [claudianX](https://github.com/reyk-zepper/claudianX) pattern: structured Markdown notes with frontmatter, INDEX.md as entry point, just-in-time retrieval. No Obsidian dependency, no vector databases. Pure filesystem, human-readable, git-versionable.
@@ -192,31 +223,40 @@ Based on the [claudianX](https://github.com/reyk-zepper/claudianX) pattern: stru
 ### Compiled Knowledge (No RAG)
 Based on [noRAG](https://github.com/reyk-zepper/noRAG): Documents are compiled into structured knowledge units ahead of time. 80-90% fewer context tokens, no hallucinations at chunk boundaries, exact source references. **Search is a runtime cost. Compilation is a build cost.**
 
+### Configurable Team Orchestration
+Teams support four patterns — Sequential, Parallel, Pipeline, and Hierarchical — auto-selected based on task analysis. A research task gets parallel researchers feeding into a sequential analyst. A code task gets a sequential plan-code-review pipeline. The user never picks the pattern; TAIM does. Power users can override.
+
+### Live Team Observability
+A rich WebSocket event stream lets you watch your team work in real-time. Not "waiting for a response" — seeing agent state transitions, progress updates, budget consumption, and intermediate results as they happen. Every event is typed, timestamped, and loggable for audit.
+
 ## Tech Stack
 
 | Component | Technology | Why |
 |-----------|-----------|-----|
 | Backend | Python 3.11+, FastAPI, Uvicorn | Async, WebSocket, LLM ecosystem |
-| Frontend | React, TypeScript, Vite, TailwindCSS | Real-time updates, modern DX |
+| Frontend | React, TypeScript, Vite, TailwindCSS, Zustand | Real-time updates, minimal state management |
 | LLM Integration | LiteLLM + custom failover | Unified API for 100+ providers |
 | Storage (Files) | Markdown, YAML | Human-readable, git-versionable |
-| Storage (Index) | SQLite + FTS5 | Zero-config, full-text search |
+| Storage (State) | SQLite (single DB, WAL mode) | Zero-config, atomic transactions |
 | Knowledge | noRAG (CKU-based) | Compiled knowledge, no RAG |
 | Memory | claudianX pattern | Structured, persistent, auditable |
 | CLI | Typer + Rich | Type-safe, beautiful output |
 
 ## Roadmap
 
-### Phase 1 — Foundation (MVP) `← current`
-The core loop works: User describes task → TAIM assembles team → Agents work → Result delivered.
-- Conversation Layer with Intent Interpreter
+### Phase 1 — Foundation (MVP) `<-- current`
+The core loop works: User describes task -> TAIM assembles team -> Agents work -> Result delivered.
+- Conversation Layer with two-stage Intent Interpreter
 - Guided Onboarding + Smart Defaults
-- Agent Registry + Team Composer
-- Multi-LLM Router with failover + model tiering
-- Agent Memory (claudianX pattern)
+- Agent Registry + Team Composer with orchestration patterns
+- Agents as state machines (PLANNING -> EXECUTING -> REVIEWING -> DONE)
+- Multi-LLM Router with failover + model tiering + error-type-aware handling
+- Three-temperature Agent Memory (claudianX pattern)
+- Token-budgeted Context Assembly
 - Heartbeat Manager (time/budget limits)
-- Token tracking with cost display
-- React Dashboard with integrated chat
+- Token tracking with cost display (always in currency, not just tokens)
+- Prompts as versioned vault files
+- React Dashboard with integrated chat + live team observability
 - CLI for power users
 
 ### Phase 2 — Intelligence
@@ -243,6 +283,14 @@ Production-grade for business deployment.
 - AWS Bedrock / Azure OpenAI native
 - MCP server integration
 - A2A protocol support
+
+## Building On
+
+TAIM builds on proven, battle-tested components:
+
+- **[noRAG](https://github.com/reyk-zepper/noRAG)** — Knowledge Compiler. Apache 2.0, production-ready. CKU-based knowledge compilation that replaces RAG entirely.
+- **[claudianX](https://github.com/reyk-zepper/claudianX)** — Memory Pattern. The structured Markdown + INDEX.md + JIT retrieval pattern that powers TAIM's self-learning memory.
+- **[codian](https://github.com/reyk-zepper/codian)** — Proves the claudianX pattern is agent-agnostic. One vault per agent becomes one namespace per agent.
 
 ## License
 
