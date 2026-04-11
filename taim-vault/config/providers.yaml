@@ -1,0 +1,48 @@
+# TAIM — LLM Provider Configuration
+# API keys are loaded from environment variables (never stored here).
+
+providers:
+  - name: anthropic
+    api_key_env: ANTHROPIC_API_KEY
+    models:
+      - claude-sonnet-4-20250514
+      - claude-haiku-4-5-20251001
+    priority: 1
+    monthly_budget: 100.00
+    currency: EUR
+
+  - name: openai
+    api_key_env: OPENAI_API_KEY
+    models:
+      - gpt-4o
+      - gpt-4o-mini
+    priority: 2
+    monthly_budget: 50.00
+    currency: EUR
+
+  - name: ollama
+    host: "http://localhost:11434"
+    models:
+      - qwen2.5:32b
+      - llama3.1:70b
+    priority: 3
+    cost: 0
+
+# Model Tiering — maps task complexity to model class
+tiering:
+  tier1_premium:
+    description: "Complex reasoning, architecture, strategy"
+    models:
+      - claude-sonnet-4-20250514
+      - gpt-4o
+  tier2_standard:
+    description: "Code generation, text processing, analysis"
+    models:
+      - claude-haiku-4-5-20251001
+      - gpt-4o-mini
+  tier3_economy:
+    description: "Classification, formatting, routing, intent detection"
+    models:
+      - qwen2.5:32b
+      - llama3.1:70b
+      - gpt-4o-mini

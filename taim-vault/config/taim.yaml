@@ -1,0 +1,35 @@
+# TAIM — Main Configuration
+# This file controls global TAIM behavior.
+
+version: "0.1.0"
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+  cors_origins:
+    - "http://localhost:5173"
+    - "http://localhost:3000"
+
+vault:
+  path: "./taim-vault"
+
+conversation:
+  # How detailed TAIM explains its decisions
+  # Options: minimal, normal, detailed
+  verbosity: normal
+  # Language for TAIM responses
+  language: auto  # auto-detect from user input
+
+orchestrator:
+  # Default heartbeat interval in seconds
+  heartbeat_interval: 30
+  # Default agent timeout in seconds
+  agent_timeout: 120
+  # Default iteration rounds for team tasks
+  default_iterations: 2
+
+tracking:
+  # SQLite database for token tracking
+  database: "taim-vault/system/state/tracking.db"
+  # Show costs in this currency
+  currency: "EUR"

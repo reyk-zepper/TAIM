@@ -1,0 +1,36 @@
+# TAIM — Smart Defaults
+# These defaults apply when the user doesn't specify values.
+# They get overridden by user preferences from memory.
+
+team:
+  # Default time budget for a team task
+  time_budget: "2h"
+  # Default token budget
+  token_budget: 500000
+  # Default iteration rounds
+  iteration_rounds: 2
+  # On limit reached: graceful_stop | pause | notify
+  on_limit_reached: graceful_stop
+
+agent:
+  # Default max iterations per agent
+  max_iterations: 10
+  # Default model tier
+  default_tier: tier2_standard
+  # Default approval gates
+  approval_gates:
+    - file_deletion
+    - external_communication
+    - budget_exceeded
+
+output:
+  # Default output format
+  format: markdown
+  # Default language (auto = follow user language)
+  language: auto
+
+costs:
+  # Always show costs in currency, not just tokens
+  display_currency: true
+  # Warn when estimated cost exceeds this (EUR)
+  warning_threshold: 10.00
