@@ -4,7 +4,7 @@
 version: "0.1.0"
 
 server:
-  host: "0.0.0.0"
+  host: "localhost"
   port: 8000
   cors_origins:
     - "http://localhost:5173"
@@ -29,7 +29,8 @@ orchestrator:
   default_iterations: 2
 
 tracking:
-  # SQLite database for token tracking
-  database: "taim-vault/system/state/tracking.db"
   # Show costs in this currency
   currency: "EUR"
+  # USD→EUR conversion rate for token cost display (PRD Section 6)
+  # Raw LLM costs are tracked in USD; this rate converts for user display.
+  usd_to_eur_rate: 0.92
