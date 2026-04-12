@@ -20,9 +20,17 @@ class TokenTracker:
                (call_id, agent_run_id, task_id, session_id, model, provider,
                 prompt_tokens, completion_tokens, cost_usd)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (usage.call_id, usage.agent_run_id, usage.task_id, usage.session_id,
-             usage.model, usage.provider, usage.prompt_tokens,
-             usage.completion_tokens, usage.cost_usd),
+            (
+                usage.call_id,
+                usage.agent_run_id,
+                usage.task_id,
+                usage.session_id,
+                usage.model,
+                usage.provider,
+                usage.prompt_tokens,
+                usage.completion_tokens,
+                usage.cost_usd,
+            ),
         )
         await self._db.commit()
 

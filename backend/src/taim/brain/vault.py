@@ -1,4 +1,4 @@
-"""VaultOps — TAIM Vault filesystem operations."""
+"""VaultOps — tAIm Vault filesystem operations."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from taim.models.config import (
 )
 
 _DEFAULT_TAIM_YAML = """\
-# TAIM — Main Configuration
+# tAIm — Main Configuration
 version: "0.1.0"
 
 server:
@@ -40,7 +40,7 @@ tracking:
 """
 
 _DEFAULT_PROVIDERS_YAML = """\
-# TAIM — LLM Provider Configuration
+# tAIm — LLM Provider Configuration
 # API keys are loaded from environment variables (never stored here).
 providers: []
 
@@ -57,7 +57,7 @@ tiering:
 """
 
 _DEFAULT_DEFAULTS_YAML = """\
-# TAIM — Smart Defaults
+# tAIm — Smart Defaults
 team:
   time_budget: "2h"
   token_budget: 500000
@@ -83,7 +83,7 @@ costs:
 
 
 class VaultOps:
-    """Filesystem operations for the TAIM Vault."""
+    """Filesystem operations for the tAIm Vault."""
 
     def __init__(self, vault_path: Path) -> None:
         resolved = vault_path.resolve()
@@ -113,7 +113,7 @@ class VaultOps:
         except PermissionError as e:
             raise VaultError(
                 user_message=(
-                    "TAIM can't create its data directory. "
+                    "tAIm can't create its data directory. "
                     f"Please check file permissions for '{self.vault_config.vault_root}'."
                 ),
                 detail=f"PermissionError creating directory: {e}",

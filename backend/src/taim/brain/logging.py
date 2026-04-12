@@ -1,4 +1,4 @@
-"""Structured logging configuration for TAIM."""
+"""Structured logging configuration for tAIm."""
 
 from __future__ import annotations
 

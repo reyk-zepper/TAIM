@@ -1,4 +1,4 @@
-"""TAIM FastAPI application — entry point."""
+"""tAIm FastAPI application — entry point."""
 
 from __future__ import annotations
 
@@ -94,13 +94,13 @@ def _resolve_cors_origins(vault_path: Path) -> list[str]:
 
 
 def create_app() -> FastAPI:
-    """Create and configure the TAIM FastAPI application."""
+    """Create and configure the tAIm FastAPI application."""
     settings = TaimSettings()
     cors_origins = _resolve_cors_origins(settings.vault_path)
 
     app = FastAPI(
-        title="TAIM",
-        description="Team AI Manager — AI team orchestration through natural language",
+        title="tAIm",
+        description="tAIm — Team AI Manager. AI team orchestration through natural language.",
         version="0.1.0",
         lifespan=lifespan,
     )

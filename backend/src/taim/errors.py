@@ -1,4 +1,4 @@
-"""TAIM error hierarchy with dual personality: user-friendly + developer-detailed."""
+"""tAIm error hierarchy with dual personality: user-friendly + developer-detailed."""
 
 from __future__ import annotations
 

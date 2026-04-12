@@ -1,4 +1,4 @@
-"""TAIM LLM Router — provider selection, failover, and tracking."""
+"""tAIm LLM Router — provider selection, failover, and tracking."""
 
 from taim.router.router import LLMRouter
 from taim.router.tiering import TierResolver
