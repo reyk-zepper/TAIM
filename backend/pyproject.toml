@@ -49,6 +49,7 @@ packages = ["src/taim"]
 [tool.pytest.ini_options]
 testpaths = ["../tests/backend"]
 asyncio_mode = "auto"
+pythonpath = ["../tests/backend"]
 
 [tool.ruff]
 target-version = "py311"
