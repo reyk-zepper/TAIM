@@ -152,8 +152,7 @@ class VaultOps:
 
         providers = [ProviderConfig(**p) for p in providers_cfg.get("providers", [])]
         tiering = {
-            name: TierConfig(**tier)
-            for name, tier in providers_cfg.get("tiering", {}).items()
+            name: TierConfig(**tier) for name, tier in providers_cfg.get("tiering", {}).items()
         }
 
         conversation = taim_cfg.get("conversation", {})

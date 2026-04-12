@@ -115,7 +115,5 @@ async def _apply_migrations(db: aiosqlite.Connection, from_version: int) -> None
     """Apply all migrations from from_version to SCHEMA_VERSION."""
     for version in range(from_version + 1, SCHEMA_VERSION + 1):
         await db.executescript(_MIGRATIONS[version])
-        await db.execute(
-            "INSERT INTO schema_version (version) VALUES (?)", (version,)
-        )
+        await db.execute("INSERT INTO schema_version (version) VALUES (?)", (version,))
         await db.commit()

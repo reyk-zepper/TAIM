@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -16,11 +16,13 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str) -> None:
     try:
         while True:
             await websocket.receive_json()
-            await websocket.send_json({
-                "type": "system",
-                "content": f"Connected to session {session_id}. Full chat in Step 3.",
-                "session_id": session_id,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            })
+            await websocket.send_json(
+                {
+                    "type": "system",
+                    "content": f"Connected to session {session_id}. Full chat in Step 3.",
+                    "session_id": session_id,
+                    "timestamp": datetime.now(UTC).isoformat(),
+                }
+            )
     except WebSocketDisconnect:
         pass
