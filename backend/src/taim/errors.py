@@ -53,7 +53,7 @@ _LLM_USER_MESSAGES = {
     LLMErrorType.TIMEOUT: "The AI service is responding slowly. Trying alternatives...",
     LLMErrorType.SAFETY_FILTER: "The response was filtered by the AI service's safety system.",
     LLMErrorType.PROVIDER_DOWN: "The AI service is currently unavailable.",
-    LLMErrorType.AUTH_ERROR: "The API key for this AI service appears invalid. Please check your configuration.",
+    LLMErrorType.AUTH_ERROR: "The API key for this AI service appears invalid. Please check your configuration.",  # noqa: E501
     LLMErrorType.BAD_FORMAT: "The AI response wasn't in the expected format. Retrying...",
 }
 
@@ -69,5 +69,5 @@ class LLMTransportError(TaimError):
         )
 
 
-class AllProvidersFailed(TaimError):
+class AllProvidersFailed(TaimError):  # noqa: N818
     """All LLM providers failed after maximum retry attempts."""

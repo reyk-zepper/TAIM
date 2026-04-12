@@ -12,7 +12,7 @@ import structlog
 from taim.errors import AllProvidersFailed, ConfigError, LLMTransportError
 from taim.models.config import ProductConfig
 from taim.models.router import LLMErrorType, LLMResponse, ModelTierEnum, RetryAction, TokenUsage
-from taim.router.failover import RetryDecision, classify_error
+from taim.router.failover import classify_error
 from taim.router.tiering import TierResolver
 from taim.router.tracking import TokenTracker
 from taim.router.transport import LLMTransport
@@ -70,9 +70,7 @@ class LLMRouter:
             provider_attempts.setdefault(provider_name, 0)
 
             api_key = (
-                os.environ.get(provider_config.api_key_env)
-                if provider_config.api_key_env
-                else None
+                os.environ.get(provider_config.api_key_env) if provider_config.api_key_env else None
             )
             api_base = provider_config.host
 
@@ -128,9 +126,7 @@ class LLMRouter:
                 provider_attempts[provider_name] += 1
                 errors.append((provider_name, model_name, e.error_type))
 
-                decision = classify_error(
-                    e, attempts, provider_attempts[provider_name]
-                )
+                decision = classify_error(e, attempts, provider_attempts[provider_name])
 
                 logger.warning(
                     "router.error",
