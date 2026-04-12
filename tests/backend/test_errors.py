@@ -60,3 +60,26 @@ class TestPromptVariableError:
         assert "user_message" in err.detail
         assert "intent-classify" in err.detail
         assert isinstance(err, TaimError)
+
+
+from taim.models.router import LLMErrorType
+
+
+class TestLLMTransportError:
+    def test_has_error_type(self) -> None:
+        from taim.errors import LLMTransportError
+        err = LLMTransportError(LLMErrorType.RATE_LIMIT, "rate limited")
+        assert err.error_type == LLMErrorType.RATE_LIMIT
+        assert isinstance(err, TaimError)
+
+    def test_auth_error_message(self) -> None:
+        from taim.errors import LLMTransportError
+        err = LLMTransportError(LLMErrorType.AUTH_ERROR, "401")
+        assert "api key" in err.user_message.lower() or "invalid" in err.user_message.lower()
+
+
+class TestAllProvidersFailed:
+    def test_is_taim_error(self) -> None:
+        from taim.errors import AllProvidersFailed
+        err = AllProvidersFailed(user_message="All AI services failed.", detail="3 attempts exhausted")
+        assert isinstance(err, TaimError)
