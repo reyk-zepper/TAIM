@@ -1,0 +1,14 @@
+# TAIM — LLM Provider Configuration
+# API keys are loaded from environment variables (never stored here).
+providers: []
+
+tiering:
+  tier1_premium:
+    description: "Complex reasoning, architecture, strategy"
+    models: []
+  tier2_standard:
+    description: "Code generation, text processing, analysis"
+    models: []
+  tier3_economy:
+    description: "Classification, formatting, routing"
+    models: []

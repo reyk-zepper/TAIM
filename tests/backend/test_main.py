@@ -43,7 +43,7 @@ class TestAppStartup:
         ) as client:
             resp = await client.get("/openapi.json")
         assert resp.status_code == 200
-        assert resp.json()["info"]["title"] == "TAIM"
+        assert resp.json()["info"]["title"] == "tAIm"
 
 
 @pytest.mark.asyncio

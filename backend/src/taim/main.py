@@ -1,4 +1,4 @@
-"""TAIM FastAPI application — entry point."""
+"""tAIm FastAPI application — entry point."""
 
 from __future__ import annotations
 
@@ -47,9 +47,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     db = await init_database(system_config.vault.db_path)
     prompt_loader = PromptLoader(system_config.vault.prompts_dir)
 
+    # 7. Router init
+    from taim.router import LLMRouter, LLMTransport, TierResolver, TokenTracker
+
+    transport = LLMTransport()
+    tier_resolver = TierResolver(product_config)
+    tracker = TokenTracker(db)
+    llm_router = LLMRouter(transport, tier_resolver, tracker, product_config)
+
     app.state.config = system_config
     app.state.db = db
     app.state.prompt_loader = prompt_loader
+    app.state.router = llm_router
 
     logger.info(
         "taim.started",
@@ -57,6 +66,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         host=server_config.host,
         port=server_config.port,
         providers=[p.name for p in product_config.providers],
+        tiers=list(product_config.tiering.keys()),
     )
 
     yield
@@ -84,13 +94,13 @@ def _resolve_cors_origins(vault_path: Path) -> list[str]:
 
 
 def create_app() -> FastAPI:
-    """Create and configure the TAIM FastAPI application."""
+    """Create and configure the tAIm FastAPI application."""
     settings = TaimSettings()
     cors_origins = _resolve_cors_origins(settings.vault_path)
 
     app = FastAPI(
-        title="TAIM",
-        description="Team AI Manager — AI team orchestration through natural language",
+        title="tAIm",
+        description="tAIm — Team AI Manager. AI team orchestration through natural language.",
         version="0.1.0",
         lifespan=lifespan,
     )

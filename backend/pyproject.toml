@@ -1,7 +1,7 @@
 [project]
 name = "taim"
 version = "0.1.0"
-description = "TAIM — Team AI Manager. AI team orchestration through natural language."
+description = "tAIm — Team AI Manager. AI team orchestration through natural language."
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.11"
@@ -49,6 +49,7 @@ packages = ["src/taim"]
 [tool.pytest.ini_options]
 testpaths = ["../tests/backend"]
 asyncio_mode = "auto"
+pythonpath = ["../tests/backend"]
 
 [tool.ruff]
 target-version = "py311"

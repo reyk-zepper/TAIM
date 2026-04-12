@@ -1,0 +1,22 @@
+# TAIM — Main Configuration
+version: "0.1.0"
+
+server:
+  host: "localhost"
+  port: 8000
+  cors_origins:
+    - "http://localhost:5173"
+    - "http://localhost:3000"
+
+conversation:
+  verbosity: normal
+  language: auto
+
+orchestrator:
+  heartbeat_interval: 30
+  agent_timeout: 120
+  default_iterations: 2
+
+tracking:
+  currency: "EUR"
+  usd_to_eur_rate: 0.92

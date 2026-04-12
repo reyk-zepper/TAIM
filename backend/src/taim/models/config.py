@@ -1,4 +1,4 @@
-"""Pydantic models for TAIM configuration."""
+"""Pydantic models for tAIm configuration."""
 
 from __future__ import annotations
 

@@ -1,5 +1,5 @@
-# TAIM — Main Configuration
-# This file controls global TAIM behavior.
+# tAIm — Main Configuration
+# This file controls global tAIm behavior.
 
 version: "0.1.0"
 

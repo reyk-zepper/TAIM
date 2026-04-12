@@ -1,4 +1,4 @@
-# TAIM — LLM Provider Configuration
+# tAIm — LLM Provider Configuration
 # API keys are loaded from environment variables (never stored here).
 
 providers:
