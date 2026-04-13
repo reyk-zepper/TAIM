@@ -166,7 +166,8 @@ model_tier: tier3_economy
 variables:
   - transcript
 template: |
-  You are tAIm's session summarizer. Compress the following chat transcript into a concise summary (3-5 sentences max).
+  You are tAIm's session summarizer. Compress the following chat transcript
+  into a concise summary (3-5 sentences max).
 
   Focus on:
   - What the user was trying to achieve

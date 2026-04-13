@@ -17,10 +17,8 @@ class SessionStore:
 
     async def persist(self, session: HotMemorySession) -> None:
         """Upsert session_state row with JSON-serialized messages."""
-        to_persist = session.messages[-HotMemorySession.MAX_MESSAGES:]
-        messages_json = json.dumps(
-            [m.model_dump(mode="json") for m in to_persist]
-        )
+        to_persist = session.messages[-HotMemorySession.MAX_MESSAGES :]
+        messages_json = json.dumps([m.model_dump(mode="json") for m in to_persist])
         await self._db.execute(
             """INSERT INTO session_state
                (session_id, user_id, messages, has_summary, updated_at)

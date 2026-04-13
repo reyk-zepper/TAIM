@@ -11,7 +11,6 @@ import frontmatter
 
 from taim.models.memory import MemoryEntry, MemoryIndex, MemoryIndexEntry
 
-
 _INDEX_LINE_PATTERN = re.compile(
     r"^- \[(?P<name>[^\]]+)\]\((?P<filename>[^)]+)\) — "
     r"(?P<summary>.+?) \(tags: (?P<tags>[^)]*)\) — "
@@ -62,9 +61,7 @@ class MemoryManager:
             await self._update_index(user)
             return path
 
-    async def read_entry(
-        self, filename: str, user: str = "default"
-    ) -> MemoryEntry | None:
+    async def read_entry(self, filename: str, user: str = "default") -> MemoryEntry | None:
         """Read a Markdown memory file into a MemoryEntry."""
         path = self._user_memory_dir(user) / filename
         if not path.exists():
@@ -74,12 +71,8 @@ class MemoryManager:
             title=post.get("title", filename),
             category=post.get("category", "unknown"),
             tags=post.get("tags", []),
-            created=date.fromisoformat(
-                str(post.get("created", date.today().isoformat()))
-            ),
-            updated=date.fromisoformat(
-                str(post.get("updated", date.today().isoformat()))
-            ),
+            created=date.fromisoformat(str(post.get("created", date.today().isoformat()))),
+            updated=date.fromisoformat(str(post.get("updated", date.today().isoformat()))),
             content=post.content,
             confidence=float(post.get("confidence", 1.0)),
             source=post.get("source", "session"),
@@ -97,12 +90,14 @@ class MemoryManager:
             if not m:
                 continue
             tags = [t.strip() for t in m.group("tags").split(",") if t.strip()]
-            entries.append(MemoryIndexEntry(
-                filename=m.group("filename"),
-                summary=m.group("summary"),
-                tags=tags,
-                updated=date.fromisoformat(m.group("date")),
-            ))
+            entries.append(
+                MemoryIndexEntry(
+                    filename=m.group("filename"),
+                    summary=m.group("summary"),
+                    tags=tags,
+                    updated=date.fromisoformat(m.group("date")),
+                )
+            )
         return MemoryIndex(entries=entries)
 
     async def find_relevant(
@@ -138,8 +133,7 @@ class MemoryManager:
             tags = ", ".join(post.get("tags", []))
             updated = post.get("updated", date.today().isoformat())
             lines.append(
-                f"- [{md_file.stem}]({md_file.name}) — {summary} "
-                f"(tags: {tags}) — {updated}"
+                f"- [{md_file.stem}]({md_file.name}) — {summary} (tags: {tags}) — {updated}"
             )
         index_path = self._user_dir(user) / "INDEX.md"
         index_path.write_text("\n".join(lines) + "\n", encoding="utf-8")

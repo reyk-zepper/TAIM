@@ -11,22 +11,16 @@ class HotMemory:
     def __init__(self) -> None:
         self._sessions: dict[str, HotMemorySession] = {}
 
-    def get_or_create(
-        self, session_id: str, user_id: str = "default"
-    ) -> HotMemorySession:
+    def get_or_create(self, session_id: str, user_id: str = "default") -> HotMemorySession:
         if session_id not in self._sessions:
-            self._sessions[session_id] = HotMemorySession(
-                session_id=session_id, user_id=user_id
-            )
+            self._sessions[session_id] = HotMemorySession(session_id=session_id, user_id=user_id)
         return self._sessions[session_id]
 
     def append_message(self, session_id: str, role: str, content: str) -> None:
         session = self.get_or_create(session_id)
         session.messages.append(ChatMessage(role=role, content=content))
 
-    def get_messages(
-        self, session_id: str, last_n: int | None = None
-    ) -> list[ChatMessage]:
+    def get_messages(self, session_id: str, last_n: int | None = None) -> list[ChatMessage]:
         session = self._sessions.get(session_id)
         if not session:
             return []
@@ -41,9 +35,7 @@ class HotMemory:
             return False
         return len(session.messages) > HotMemorySession.MAX_MESSAGES
 
-    def trim_after_summary(
-        self, session_id: str, keep_last_n: int = 10
-    ) -> list[ChatMessage]:
+    def trim_after_summary(self, session_id: str, keep_last_n: int = 10) -> list[ChatMessage]:
         """Remove oldest messages except the last N. Returns the removed messages."""
         session = self._sessions.get(session_id)
         if not session:
