@@ -55,14 +55,30 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     tracker = TokenTracker(db)
     llm_router = LLMRouter(transport, tier_resolver, tracker, product_config)
 
-    # 8. Intent Interpreter
+    # 8. Memory System
+    from taim.brain.hot_memory import HotMemory
+    from taim.brain.memory import MemoryManager
+    from taim.brain.session_store import SessionStore
+    from taim.brain.summarizer import Summarizer
+
+    memory_manager = MemoryManager(system_config.vault.users_dir)
+    hot_memory = HotMemory()
+    session_store = SessionStore(db)
+    summarizer = Summarizer(llm_router, prompt_loader, memory_manager)
+
+    app.state.memory = memory_manager
+    app.state.hot_memory = hot_memory
+    app.state.session_store = session_store
+    app.state.summarizer = summarizer
+
+    # 9. Intent Interpreter — now with real memory
     from taim.conversation import IntentInterpreter
 
     interpreter = IntentInterpreter(
         router=llm_router,
         prompt_loader=prompt_loader,
-        memory=None,  # Step 4 will inject
-        orchestrator=None,  # Step 7 will inject
+        memory=memory_manager,
+        orchestrator=None,  # Step 7 still
     )
 
     app.state.config = system_config
