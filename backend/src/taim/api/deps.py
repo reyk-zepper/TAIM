@@ -11,6 +11,8 @@ from taim.brain.prompts import PromptLoader
 from taim.brain.skill_registry import SkillRegistry
 from taim.conversation import IntentInterpreter
 from taim.models.config import SystemConfig
+from taim.orchestrator.orchestrator import Orchestrator
+from taim.orchestrator.task_manager import TaskManager
 from taim.orchestrator.tools import ToolExecutor
 from taim.router.router import LLMRouter
 
@@ -58,3 +60,13 @@ def get_tool_executor(request: Request) -> ToolExecutor:
 def get_skill_registry(request: Request) -> SkillRegistry:
     """Inject the SkillRegistry singleton."""
     return request.app.state.skill_registry
+
+
+def get_task_manager(request: Request) -> TaskManager:
+    """Inject the TaskManager singleton."""
+    return request.app.state.task_manager
+
+
+def get_orchestrator(request: Request) -> Orchestrator:
+    """Inject the Orchestrator singleton."""
+    return request.app.state.orchestrator

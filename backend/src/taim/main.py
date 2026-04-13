@@ -128,6 +128,32 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.skill_registry = skill_registry
     logger.info("skills.loaded", count=len(skill_registry.list_skills()))
 
+    # 13. Orchestrator
+    from taim.orchestrator.orchestrator import Orchestrator
+    from taim.orchestrator.task_manager import TaskManager
+    from taim.orchestrator.team_composer import TeamComposer
+
+    task_manager = TaskManager(db)
+    team_composer = TeamComposer(registry)
+
+    orchestrator = Orchestrator(
+        composer=team_composer,
+        task_manager=task_manager,
+        agent_registry=registry,
+        agent_run_store=agent_run_store,
+        prompt_loader=prompt_loader,
+        router=llm_router,
+        tool_executor=tool_executor,
+        tool_context=app.state.tool_context,
+        skill_registry=skill_registry,
+    )
+
+    app.state.task_manager = task_manager
+    app.state.team_composer = team_composer
+    app.state.orchestrator = orchestrator
+
+    logger.info("orchestrator.ready")
+
     # 9. Intent Interpreter — now with real memory
     from taim.conversation import IntentInterpreter
 
@@ -211,6 +237,10 @@ def create_app() -> FastAPI:
     from taim.api.skills import router as skills_router
 
     app.include_router(skills_router)
+
+    from taim.api.tasks import router as tasks_router
+
+    app.include_router(tasks_router)
 
     return app
 
