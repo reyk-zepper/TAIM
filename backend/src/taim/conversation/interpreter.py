@@ -106,9 +106,7 @@ class IntentInterpreter:
     def _format_context(self, recent: list[dict]) -> str:
         if not recent:
             return "(no recent messages)"
-        return "\n".join(
-            f"{m.get('role', 'user')}: {m.get('content', '')}" for m in recent[-5:]
-        )
+        return "\n".join(f"{m.get('role', 'user')}: {m.get('content', '')}" for m in recent[-5:])
 
     def _build_followup(self, missing: list[str]) -> str:
         if len(missing) == 1:
