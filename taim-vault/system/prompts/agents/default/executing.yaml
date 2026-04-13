@@ -1,0 +1,24 @@
+name: agents/default/executing
+version: 1
+description: Default EXECUTING prompt — agent carries out the plan
+model_tier: tier2_standard
+variables:
+  - task_description
+  - agent_description
+  - plan
+  - iteration
+  - user_preferences
+template: |
+  You are a {{ agent_description }}.
+
+  Task: {{ task_description }}
+
+  Your plan:
+  {{ plan }}
+
+  Iteration: {{ iteration }}
+
+  User preferences:
+  {{ user_preferences }}
+
+  Execute the plan and produce the result.

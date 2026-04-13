@@ -1,0 +1,20 @@
+name: agents/default/iterating
+version: 1
+description: Default ITERATING prompt — agent improves based on review feedback
+model_tier: tier2_standard
+variables:
+  - task_description
+  - current_result
+  - review_feedback
+template: |
+  Improve the following result based on the review feedback.
+
+  Task: {{ task_description }}
+
+  Previous result:
+  {{ current_result }}
+
+  Reviewer feedback:
+  {{ review_feedback }}
+
+  Produce an improved result that addresses the feedback.

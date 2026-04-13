@@ -143,3 +143,18 @@ class TestDefaultAgents:
         ops.ensure_vault()
         for name in ["researcher", "coder", "reviewer", "writer", "analyst"]:
             assert (ops.vault_config.agents_dir / f"{name}.yaml").exists()
+
+
+class TestDefaultStatePrompts:
+    def test_creates_default_state_prompts(self, tmp_path: Path) -> None:
+        ops = VaultOps(tmp_path / "vault")
+        ops.ensure_vault()
+        default_dir = ops.vault_config.prompts_dir / "agents" / "default"
+        for state in ["planning", "executing", "reviewing", "iterating"]:
+            assert (default_dir / f"{state}.yaml").exists()
+
+    def test_creates_researcher_override(self, tmp_path: Path) -> None:
+        ops = VaultOps(tmp_path / "vault")
+        ops.ensure_vault()
+        path = ops.vault_config.prompts_dir / "agents" / "researcher" / "executing.yaml"
+        assert path.exists()

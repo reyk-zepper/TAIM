@@ -259,6 +259,129 @@ max_iterations: 3
 requires_approval_for: []
 """
 
+_DEFAULT_STATE_PROMPT_PLANNING = """\
+name: agents/default/planning
+version: 1
+description: Default PLANNING prompt — agent analyzes task and proposes an approach
+model_tier: tier2_standard
+variables:
+  - task_description
+  - agent_description
+  - user_preferences
+template: |
+  You are a {{ agent_description }}.
+
+  Your task: {{ task_description }}
+
+  User preferences:
+  {{ user_preferences }}
+
+  Think through how you will approach this task. Output a concise plan (3-6 bullet points).
+  Do not execute yet. Just plan.
+"""
+
+_DEFAULT_STATE_PROMPT_EXECUTING = """\
+name: agents/default/executing
+version: 1
+description: Default EXECUTING prompt — agent carries out the plan
+model_tier: tier2_standard
+variables:
+  - task_description
+  - agent_description
+  - plan
+  - iteration
+  - user_preferences
+template: |
+  You are a {{ agent_description }}.
+
+  Task: {{ task_description }}
+
+  Your plan:
+  {{ plan }}
+
+  Iteration: {{ iteration }}
+
+  User preferences:
+  {{ user_preferences }}
+
+  Execute the plan and produce the result.
+"""
+
+_DEFAULT_STATE_PROMPT_REVIEWING = """\
+name: agents/default/reviewing
+version: 1
+description: Default REVIEWING prompt — agent self-assesses its output
+model_tier: tier2_standard
+variables:
+  - task_description
+  - current_result
+template: |
+  You are a critical reviewer. Assess the following result against the task.
+
+  Task: {{ task_description }}
+
+  Result:
+  {{ current_result }}
+
+  Respond with JSON only:
+  {
+    "quality_ok": <true | false>,
+    "feedback": "<specific feedback — what is good, what needs improvement>"
+  }
+
+  quality_ok=true only if the result fully satisfies the task.
+"""
+
+_DEFAULT_STATE_PROMPT_ITERATING = """\
+name: agents/default/iterating
+version: 1
+description: Default ITERATING prompt — agent improves based on review feedback
+model_tier: tier2_standard
+variables:
+  - task_description
+  - current_result
+  - review_feedback
+template: |
+  Improve the following result based on the review feedback.
+
+  Task: {{ task_description }}
+
+  Previous result:
+  {{ current_result }}
+
+  Reviewer feedback:
+  {{ review_feedback }}
+
+  Produce an improved result that addresses the feedback.
+"""
+
+_RESEARCHER_EXECUTING_OVERRIDE = """\
+name: agents/researcher/executing
+version: 1
+description: Researcher-specific EXECUTING prompt — emphasizes source verification
+model_tier: tier2_standard
+variables:
+  - task_description
+  - agent_description
+  - plan
+  - iteration
+  - user_preferences
+template: |
+  You are a researcher. Verify sources, prefer primary data, and cite specifics.
+
+  Task: {{ task_description }}
+
+  Your plan:
+  {{ plan }}
+
+  Iteration: {{ iteration }}
+
+  User preferences:
+  {{ user_preferences }}
+
+  Execute the plan. Cite sources. Avoid speculation.
+"""
+
 
 class VaultOps:
     """Filesystem operations for the tAIm Vault."""
@@ -304,6 +427,7 @@ class VaultOps:
         self._ensure_default_configs()
         self._ensure_default_prompts()
         self._ensure_default_agents()
+        self._ensure_default_state_prompts()
 
     def load_raw_yaml(self, filename: str) -> dict:
         """Load a YAML file from the config directory."""
@@ -386,5 +510,23 @@ class VaultOps:
         }
         for filename, content in defaults.items():
             path = self.vault_config.agents_dir / filename
+            if not path.exists():
+                path.write_text(content, encoding="utf-8")
+
+    def _ensure_default_state_prompts(self) -> None:
+        """Seed default per-state prompts and researcher override."""
+        default_dir = self.vault_config.prompts_dir / "agents" / "default"
+        researcher_dir = self.vault_config.prompts_dir / "agents" / "researcher"
+        default_dir.mkdir(parents=True, exist_ok=True)
+        researcher_dir.mkdir(parents=True, exist_ok=True)
+
+        defaults = {
+            default_dir / "planning.yaml": _DEFAULT_STATE_PROMPT_PLANNING,
+            default_dir / "executing.yaml": _DEFAULT_STATE_PROMPT_EXECUTING,
+            default_dir / "reviewing.yaml": _DEFAULT_STATE_PROMPT_REVIEWING,
+            default_dir / "iterating.yaml": _DEFAULT_STATE_PROMPT_ITERATING,
+            researcher_dir / "executing.yaml": _RESEARCHER_EXECUTING_OVERRIDE,
+        }
+        for path, content in defaults.items():
             if not path.exists():
                 path.write_text(content, encoding="utf-8")
