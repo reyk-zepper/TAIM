@@ -1,0 +1,14 @@
+name: vault_memory_read
+description: Read a memory entry from the user's persistent vault memory
+requires_approval: false
+source: builtin
+parameters:
+  type: object
+  properties:
+    filename:
+      type: string
+      description: Memory file name (e.g., "preferences.md")
+    user:
+      type: string
+      default: default
+  required: [filename]

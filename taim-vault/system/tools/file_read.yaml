@@ -1,0 +1,11 @@
+name: file_read
+description: Read the contents of a text file from the vault or workspace
+requires_approval: false
+source: builtin
+parameters:
+  type: object
+  properties:
+    path:
+      type: string
+      description: Absolute or relative path within vault/workspace
+  required: [path]

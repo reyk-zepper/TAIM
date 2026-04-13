@@ -158,3 +158,12 @@ class TestDefaultStatePrompts:
         ops.ensure_vault()
         path = ops.vault_config.prompts_dir / "agents" / "researcher" / "executing.yaml"
         assert path.exists()
+
+
+class TestDefaultTools:
+    def test_creates_four_tool_schemas(self, tmp_path: Path) -> None:
+        ops = VaultOps(tmp_path / "vault")
+        ops.ensure_vault()
+        tools_dir = ops.vault_config.vault_root / "system" / "tools"
+        for name in ["file_read", "file_write", "vault_memory_read", "vault_memory_write"]:
+            assert (tools_dir / f"{name}.yaml").exists()
