@@ -60,3 +60,47 @@ def make_response(content: str = "ok", **overrides) -> LLMResponse:
     }
     defaults.update(overrides)
     return LLMResponse(**defaults)
+
+
+class MockRouter:
+    """Test router that returns canned responses for interpreter tests."""
+
+    def __init__(self, responses: list):
+        self._responses = list(responses)
+        self.calls: list[dict] = []
+
+    async def complete(self, **kwargs):
+        self.calls.append(kwargs)
+        r = self._responses.pop(0)
+        if isinstance(r, Exception):
+            raise r
+        return r
+
+
+def make_classification_response(category: str, confidence: float = 0.95, needs_deep: bool = False) -> LLMResponse:
+    """Build an LLMResponse with a JSON classification body."""
+    import json
+    body = json.dumps({
+        "category": category,
+        "confidence": confidence,
+        "needs_deep_analysis": needs_deep,
+    })
+    return make_response(content=body)
+
+
+def make_intent_response(
+    task_type: str = "research",
+    objective: str = "Find competitors",
+    missing_info: list[str] | None = None,
+) -> LLMResponse:
+    """Build an LLMResponse with a JSON intent body."""
+    import json
+    body = json.dumps({
+        "task_type": task_type,
+        "objective": objective,
+        "parameters": {},
+        "constraints": {"time_limit_seconds": None, "budget_eur": None},
+        "missing_info": missing_info or [],
+        "suggested_team": [],
+    })
+    return make_response(content=body)

@@ -81,6 +81,83 @@ costs:
   warning_threshold: 10.00
 """
 
+_DEFAULT_INTENT_CLASSIFIER_PROMPT = """\
+name: intent-classifier
+version: 1
+description: "Stage 1 — classify user message into intent category"
+model_tier: tier3_economy
+variables:
+  - user_message
+  - recent_context
+template: |
+  You are tAIm's intent classifier. Classify the user's message into ONE category.
+
+  Recent context (last few messages):
+  {{ recent_context }}
+
+  User message: "{{ user_message }}"
+
+  Categories:
+  - new_task: User wants to start a new task or project
+  - confirmation: User confirms or approves something ("yes", "go ahead", "do it")
+  - follow_up: User adds to or modifies an existing task
+  - status_query: User asks about current status ("what's happening?", "status?")
+  - configuration: User wants to change settings or preferences
+  - stop_command: User wants to stop ("stop", "cancel", "halt")
+  - onboarding_response: User answers an onboarding question
+
+  Respond with JSON only, no markdown:
+  {
+    "category": "<one of the categories above>",
+    "confidence": <0.0 to 1.0>,
+    "needs_deep_analysis": <true if message is complex/ambiguous, false if clear>
+  }
+"""
+
+_DEFAULT_INTENT_INTERPRETER_PROMPT = """\
+name: intent-interpreter
+version: 1
+description: "Stage 2 — extract structured task command from user message"
+model_tier: tier2_standard
+variables:
+  - user_message
+  - recent_context
+  - user_preferences
+template: |
+  You are tAIm's intent interpreter. Extract a structured task command from the user's message.
+
+  User preferences (from memory):
+  {{ user_preferences }}
+
+  Recent context:
+  {{ recent_context }}
+
+  User message: "{{ user_message }}"
+
+  Extract:
+  - task_type: short label (e.g., "research", "code_review", "content_creation")
+  - objective: one-sentence description of what the user wants achieved
+  - parameters: dict of specific values (URLs, names, file paths) mentioned
+  - constraints: time/budget limits if mentioned
+  - missing_info: list of critical info NOT in the message but needed
+  - suggested_team: optional list of agent role names that fit the task
+
+  If anything critical is missing, include it in missing_info — do NOT guess.
+
+  Respond with JSON only, no markdown:
+  {
+    "task_type": "<string>",
+    "objective": "<string>",
+    "parameters": {},
+    "constraints": {
+      "time_limit_seconds": null,
+      "budget_eur": null
+    },
+    "missing_info": [],
+    "suggested_team": []
+  }
+"""
+
 
 class VaultOps:
     """Filesystem operations for the tAIm Vault."""
@@ -124,6 +201,7 @@ class VaultOps:
             index_path.write_text("# Memory Index\n\n<!-- Entries added automatically -->\n")
 
         self._ensure_default_configs()
+        self._ensure_default_prompts()
 
     def load_raw_yaml(self, filename: str) -> dict:
         """Load a YAML file from the config directory."""
@@ -180,5 +258,16 @@ class VaultOps:
         }
         for filename, content in defaults.items():
             path = self.vault_config.config_dir / filename
+            if not path.exists():
+                path.write_text(content, encoding="utf-8")
+
+    def _ensure_default_prompts(self) -> None:
+        """Write default prompt YAML files only if they don't exist."""
+        defaults = {
+            "intent-classifier.yaml": _DEFAULT_INTENT_CLASSIFIER_PROMPT,
+            "intent-interpreter.yaml": _DEFAULT_INTENT_INTERPRETER_PROMPT,
+        }
+        for filename, content in defaults.items():
+            path = self.vault_config.prompts_dir / filename
             if not path.exists():
                 path.write_text(content, encoding="utf-8")
