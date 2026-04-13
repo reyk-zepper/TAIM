@@ -24,9 +24,7 @@ class AgentRunStore:
         session_id: str | None = None,
     ) -> None:
         """Persist current state. Called after every transition."""
-        history_json = json.dumps(
-            [t.model_dump(mode="json") for t in state.state_history]
-        )
+        history_json = json.dumps([t.model_dump(mode="json") for t in state.state_history])
         await self._db.execute(
             """INSERT INTO agent_runs
                (run_id, agent_name, task_id, team_id, session_id,
@@ -39,8 +37,16 @@ class AgentRunStore:
                    cost_eur = excluded.cost_eur,
                    completed_at = CASE WHEN excluded.final_state IN ('DONE', 'FAILED')
                                        THEN datetime('now') ELSE completed_at END""",
-            (state.run_id, agent_name, task_id, team_id, session_id,
-             history_json, state.current_state.value, state.cost_eur),
+            (
+                state.run_id,
+                agent_name,
+                task_id,
+                team_id,
+                session_id,
+                history_json,
+                state.current_state.value,
+                state.cost_eur,
+            ),
         )
         await self._db.commit()
 

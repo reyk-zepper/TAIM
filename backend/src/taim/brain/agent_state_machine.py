@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Awaitable, Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import structlog
@@ -14,7 +14,12 @@ from taim.brain.agent_run_store import AgentRunStore
 from taim.brain.prompts import PromptLoader
 from taim.errors import AllProvidersFailed, PromptNotFoundError
 from taim.models.agent import (
-    Agent, AgentRun, AgentState, AgentStateEnum, ReviewResult, StateTransition,
+    Agent,
+    AgentRun,
+    AgentState,
+    AgentStateEnum,
+    ReviewResult,
+    StateTransition,
 )
 from taim.models.router import ModelTierEnum
 
@@ -69,7 +74,8 @@ class AgentStateMachine:
 
         try:
             while self._state.current_state not in (
-                AgentStateEnum.DONE, AgentStateEnum.FAILED,
+                AgentStateEnum.DONE,
+                AgentStateEnum.FAILED,
             ):
                 if self._state.current_state == AgentStateEnum.PLANNING:
                     await self._do_planning()
@@ -96,34 +102,43 @@ class AgentStateMachine:
         return self._build_run()
 
     async def _do_planning(self) -> None:
-        prompt = await self._load_state_prompt(AgentStateEnum.PLANNING, {
-            "task_description": self._task_description,
-            "agent_description": self._agent.description,
-            "user_preferences": self._user_preferences,
-        })
+        prompt = await self._load_state_prompt(
+            AgentStateEnum.PLANNING,
+            {
+                "task_description": self._task_description,
+                "agent_description": self._agent.description,
+                "user_preferences": self._user_preferences,
+            },
+        )
         response = await self._call_llm(prompt)
         self._state.plan = response.content
         self._accumulate_cost(response)
         await self._transition(AgentStateEnum.EXECUTING, "planning_complete")
 
     async def _do_executing(self) -> None:
-        prompt = await self._load_state_prompt(AgentStateEnum.EXECUTING, {
-            "task_description": self._task_description,
-            "agent_description": self._agent.description,
-            "plan": self._state.plan,
-            "iteration": str(self._state.iteration),
-            "user_preferences": self._user_preferences,
-        })
+        prompt = await self._load_state_prompt(
+            AgentStateEnum.EXECUTING,
+            {
+                "task_description": self._task_description,
+                "agent_description": self._agent.description,
+                "plan": self._state.plan,
+                "iteration": str(self._state.iteration),
+                "user_preferences": self._user_preferences,
+            },
+        )
         response = await self._call_llm(prompt)
         self._state.current_result = response.content
         self._accumulate_cost(response)
         await self._transition(AgentStateEnum.REVIEWING, "execution_complete")
 
     async def _do_reviewing(self) -> None:
-        prompt = await self._load_state_prompt(AgentStateEnum.REVIEWING, {
-            "task_description": self._task_description,
-            "current_result": self._state.current_result,
-        })
+        prompt = await self._load_state_prompt(
+            AgentStateEnum.REVIEWING,
+            {
+                "task_description": self._task_description,
+                "current_result": self._state.current_result,
+            },
+        )
         response = await self._call_llm(prompt, expected_format="json")
         self._accumulate_cost(response)
 
@@ -132,7 +147,8 @@ class AgentStateMachine:
         except (json.JSONDecodeError, ValidationError):
             # Fail-safe: accept current result (don't loop forever)
             await self._transition(
-                AgentStateEnum.DONE, "review_unparseable_accepted_as_is",
+                AgentStateEnum.DONE,
+                "review_unparseable_accepted_as_is",
             )
             return
 
@@ -147,21 +163,26 @@ class AgentStateMachine:
             )
         else:
             await self._transition(
-                AgentStateEnum.ITERATING, "review_failed_iterating",
+                AgentStateEnum.ITERATING,
+                "review_failed_iterating",
             )
 
     async def _do_iterating(self) -> None:
         self._state.iteration += 1
-        prompt = await self._load_state_prompt(AgentStateEnum.ITERATING, {
-            "task_description": self._task_description,
-            "current_result": self._state.current_result,
-            "review_feedback": self._state.review_feedback,
-        })
+        prompt = await self._load_state_prompt(
+            AgentStateEnum.ITERATING,
+            {
+                "task_description": self._task_description,
+                "current_result": self._state.current_result,
+                "review_feedback": self._state.review_feedback,
+            },
+        )
         response = await self._call_llm(prompt)
         self._state.current_result = response.content
         self._accumulate_cost(response)
         await self._transition(
-            AgentStateEnum.EXECUTING, f"iteration_{self._state.iteration}",
+            AgentStateEnum.EXECUTING,
+            f"iteration_{self._state.iteration}",
         )
 
     async def _load_state_prompt(
@@ -172,18 +193,18 @@ class AgentStateMachine:
         state_name = state.value.lower()
         try:
             return self._prompts.load(
-                f"agents/{self._agent.name}/{state_name}", variables,
+                f"agents/{self._agent.name}/{state_name}",
+                variables,
             )
         except PromptNotFoundError:
             return self._prompts.load(
-                f"agents/default/{state_name}", variables,
+                f"agents/default/{state_name}",
+                variables,
             )
 
     async def _call_llm(self, prompt: str, expected_format: str | None = None):
         tier_str = (
-            self._agent.model_preference[0]
-            if self._agent.model_preference
-            else "tier2_standard"
+            self._agent.model_preference[0] if self._agent.model_preference else "tier2_standard"
         )
         tier = ModelTierEnum(tier_str)
         return await self._router.complete(
@@ -196,21 +217,21 @@ class AgentStateMachine:
         )
 
     def _accumulate_cost(self, response) -> None:
-        self._state.tokens_used += (
-            response.prompt_tokens + response.completion_tokens
-        )
+        self._state.tokens_used += response.prompt_tokens + response.completion_tokens
         # Router tracks USD; convert approximately. Full conversion at display layer.
         self._state.cost_eur += response.cost_usd * 0.92
 
     async def _transition(self, to_state: AgentStateEnum, reason: str) -> None:
         prev = self._state.current_state if self._state.state_history else None
-        ts = datetime.now(timezone.utc)
-        self._state.state_history.append(StateTransition(
-            from_state=prev,
-            to_state=to_state,
-            timestamp=ts,
-            reason=reason,
-        ))
+        ts = datetime.now(UTC)
+        self._state.state_history.append(
+            StateTransition(
+                from_state=prev,
+                to_state=to_state,
+                timestamp=ts,
+                reason=reason,
+            )
+        )
         self._state.current_state = to_state
 
         await self._store.upsert(
@@ -223,15 +244,17 @@ class AgentStateMachine:
 
         if self._on_transition:
             try:
-                await self._on_transition(TransitionEvent(
-                    run_id=self._state.run_id,
-                    agent_name=self._agent.name,
-                    from_state=prev,
-                    to_state=to_state,
-                    iteration=self._state.iteration,
-                    reason=reason,
-                    timestamp=ts,
-                ))
+                await self._on_transition(
+                    TransitionEvent(
+                        run_id=self._state.run_id,
+                        agent_name=self._agent.name,
+                        from_state=prev,
+                        to_state=to_state,
+                        iteration=self._state.iteration,
+                        reason=reason,
+                        timestamp=ts,
+                    )
+                )
             except Exception:
                 logger.exception(
                     "transition_callback.error",

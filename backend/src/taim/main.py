@@ -71,6 +71,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.session_store = session_store
     app.state.summarizer = summarizer
 
+    # 10. Agent Registry + Run Store
+    from taim.brain.agent_registry import AgentRegistry
+    from taim.brain.agent_run_store import AgentRunStore
+
+    registry = AgentRegistry(system_config.vault.agents_dir)
+    registry.load()
+    agent_run_store = AgentRunStore(db)
+
+    app.state.agent_registry = registry
+    app.state.agent_run_store = agent_run_store
+
+    logger.info("agents.loaded", count=len(registry.list_agents()))
+
     # 9. Intent Interpreter — now with real memory
     from taim.conversation import IntentInterpreter
 
@@ -142,6 +155,10 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(chat_router)
+
+    from taim.api.agents import router as agents_router
+
+    app.include_router(agents_router)
 
     return app
 

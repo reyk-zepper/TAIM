@@ -52,7 +52,4 @@ class AgentRegistry:
 
     def find_by_skill(self, skill: str) -> list[Agent]:
         skill_lower = skill.lower()
-        return [
-            a for a in self._agents.values()
-            if skill_lower in [s.lower() for s in a.skills]
-        ]
+        return [a for a in self._agents.values() if skill_lower in [s.lower() for s in a.skills]]
