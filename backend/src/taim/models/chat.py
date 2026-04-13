@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class IntentCategory(str, Enum):
+class IntentCategory(StrEnum):
     NEW_TASK = "new_task"
     CONFIRMATION = "confirmation"
     FOLLOW_UP = "follow_up"
@@ -19,6 +19,7 @@ class IntentCategory(str, Enum):
 
 class IntentClassification(BaseModel):
     """Stage 1 output."""
+
     category: IntentCategory
     confidence: float = Field(ge=0.0, le=1.0)
     needs_deep_analysis: bool = False
@@ -26,6 +27,7 @@ class IntentClassification(BaseModel):
 
 class TaskConstraints(BaseModel):
     """Constraints parsed from a Stage 2 user message."""
+
     time_limit_seconds: int | None = None
     budget_eur: float | None = None
     specific_agents: list[str] = []
@@ -34,6 +36,7 @@ class TaskConstraints(BaseModel):
 
 class IntentResult(BaseModel):
     """Stage 2 output — structured task command."""
+
     task_type: str
     objective: str
     parameters: dict[str, str | int | float | bool] = {}
@@ -44,6 +47,7 @@ class IntentResult(BaseModel):
 
 class InterpreterResult(BaseModel):
     """Final output of IntentInterpreter."""
+
     classification: IntentClassification
     intent: IntentResult | None = None
     direct_response: str | None = None

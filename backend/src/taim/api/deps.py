@@ -6,6 +6,7 @@ import aiosqlite
 from fastapi import Request
 
 from taim.brain.prompts import PromptLoader
+from taim.conversation import IntentInterpreter
 from taim.models.config import SystemConfig
 from taim.router.router import LLMRouter
 
@@ -28,3 +29,8 @@ def get_prompt_loader(request: Request) -> PromptLoader:
 def get_router(request: Request) -> LLMRouter:
     """Inject the LLMRouter singleton."""
     return request.app.state.router
+
+
+def get_interpreter(request: Request) -> IntentInterpreter:
+    """Inject the IntentInterpreter singleton."""
+    return request.app.state.interpreter

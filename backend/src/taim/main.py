@@ -55,10 +55,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     tracker = TokenTracker(db)
     llm_router = LLMRouter(transport, tier_resolver, tracker, product_config)
 
+    # 8. Intent Interpreter
+    from taim.conversation import IntentInterpreter
+
+    interpreter = IntentInterpreter(
+        router=llm_router,
+        prompt_loader=prompt_loader,
+        memory=None,  # Step 4 will inject
+        orchestrator=None,  # Step 7 will inject
+    )
+
     app.state.config = system_config
     app.state.db = db
     app.state.prompt_loader = prompt_loader
     app.state.router = llm_router
+    app.state.interpreter = interpreter
 
     logger.info(
         "taim.started",
