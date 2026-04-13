@@ -84,6 +84,41 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     logger.info("agents.loaded", count=len(registry.list_agents()))
 
+    # 11. Tool System
+    from taim.orchestrator.builtin_tools.file_io import file_read, file_write
+    from taim.orchestrator.builtin_tools.memory_tools import (
+        vault_memory_read,
+        vault_memory_write,
+    )
+    from taim.orchestrator.tool_registry import ToolRegistry
+    from taim.orchestrator.tools import ToolExecutor
+
+    tool_registry = ToolRegistry(system_config.vault.vault_root / "system" / "tools")
+    tool_registry.load()
+
+    global_denylist = (
+        product_config.defaults.get("tools", {}).get("global_denylist", [])
+        if isinstance(product_config.defaults.get("tools"), dict)
+        else []
+    )
+    tool_executor = ToolExecutor(
+        registry=tool_registry,
+        global_denylist=global_denylist,
+    )
+    tool_executor.register("file_read", file_read)
+    tool_executor.register("file_write", file_write)
+    tool_executor.register("vault_memory_read", vault_memory_read)
+    tool_executor.register("vault_memory_write", vault_memory_write)
+
+    app.state.tool_registry = tool_registry
+    app.state.tool_executor = tool_executor
+    app.state.tool_context = {
+        "allowed_roots": [system_config.vault.vault_root],
+        "memory_manager": memory_manager,
+    }
+
+    logger.info("tools.loaded", count=len(tool_executor.list_tools()))
+
     # 9. Intent Interpreter — now with real memory
     from taim.conversation import IntentInterpreter
 
@@ -159,6 +194,10 @@ def create_app() -> FastAPI:
     from taim.api.agents import router as agents_router
 
     app.include_router(agents_router)
+
+    from taim.api.tools import router as tools_router
+
+    app.include_router(tools_router)
 
     return app
 

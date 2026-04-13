@@ -7,6 +7,8 @@ skills:
   - data_analysis
   - pattern_recognition
   - insight_synthesis
-tools: []
+tools:
+  - file_read
+  - vault_memory_read
 max_iterations: 3
 requires_approval_for: []

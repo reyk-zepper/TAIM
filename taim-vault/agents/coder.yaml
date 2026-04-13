@@ -7,7 +7,9 @@ skills:
   - code_writing
   - refactoring
   - code_explanation
-tools: []
+tools:
+  - file_read
+  - file_write
 max_iterations: 3
 requires_approval_for:
   - file_deletion

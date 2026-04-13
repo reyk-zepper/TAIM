@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
@@ -56,7 +56,7 @@ class AgentStateMachine:
         team_id: str = "",
         user_preferences: str = "",
         on_transition: Callable[[TransitionEvent], Awaitable[None]] | None = None,
-        tool_executor: "ToolExecutor | None" = None,
+        tool_executor: ToolExecutor | None = None,
         tool_context: dict[str, Any] | None = None,
         on_tool_event: Callable[[ToolExecutionEvent], Awaitable[None]] | None = None,
         run_id: str | None = None,
@@ -127,13 +127,16 @@ class AgentStateMachine:
         await self._transition(AgentStateEnum.EXECUTING, "planning_complete")
 
     async def _do_executing(self) -> None:
-        base_prompt = await self._load_state_prompt(AgentStateEnum.EXECUTING, {
-            "task_description": self._task_description,
-            "agent_description": self._agent.description,
-            "plan": self._state.plan,
-            "iteration": str(self._state.iteration),
-            "user_preferences": self._user_preferences,
-        })
+        base_prompt = await self._load_state_prompt(
+            AgentStateEnum.EXECUTING,
+            {
+                "task_description": self._task_description,
+                "agent_description": self._agent.description,
+                "plan": self._state.plan,
+                "iteration": str(self._state.iteration),
+                "user_preferences": self._user_preferences,
+            },
+        )
 
         tools = None
         if self._tool_executor and self._agent.tools:
@@ -143,8 +146,8 @@ class AgentStateMachine:
 
         messages: list[dict] = [{"role": "system", "content": base_prompt}]
 
-        MAX_TOOL_LOOPS = 10
-        for _ in range(MAX_TOOL_LOOPS):
+        max_tool_loops = 10
+        for _ in range(max_tool_loops):
             response = await self._call_llm(messages, tools=tools)
             self._accumulate_cost(response)
 
@@ -153,18 +156,20 @@ class AgentStateMachine:
                 break
 
             # Append assistant's tool_calls message
-            messages.append({
-                "role": "assistant",
-                "content": response.content or "",
-                "tool_calls": [
-                    {
-                        "id": tc["id"],
-                        "type": "function",
-                        "function": {"name": tc["name"], "arguments": tc["arguments"]},
-                    }
-                    for tc in response.tool_calls
-                ],
-            })
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": response.content or "",
+                    "tool_calls": [
+                        {
+                            "id": tc["id"],
+                            "type": "function",
+                            "function": {"name": tc["name"], "arguments": tc["arguments"]},
+                        }
+                        for tc in response.tool_calls
+                    ],
+                }
+            )
 
             # Execute each tool call and append results
             for tc_raw in response.tool_calls:
@@ -179,7 +184,9 @@ class AgentStateMachine:
                 call = ToolCall(id=tc_raw["id"], name=tc_raw["name"], arguments=args)
 
                 await self._emit_tool_event(
-                    call.name, "running", summary=self._summarize_call(call),
+                    call.name,
+                    "running",
+                    summary=self._summarize_call(call),
                 )
                 result = await self._tool_executor.execute(call, self._tool_context or {})
                 await self._emit_tool_event(
@@ -191,22 +198,24 @@ class AgentStateMachine:
                 )
 
                 # Track in state history (lightweight audit)
-                self._state.state_history.append(StateTransition(
-                    from_state=AgentStateEnum.EXECUTING,
-                    to_state=AgentStateEnum.EXECUTING,
-                    timestamp=datetime.now(timezone.utc),
-                    reason=f"tool:{call.name}:{'ok' if result.success else 'err'}",
-                ))
+                self._state.state_history.append(
+                    StateTransition(
+                        from_state=AgentStateEnum.EXECUTING,
+                        to_state=AgentStateEnum.EXECUTING,
+                        timestamp=datetime.now(UTC),
+                        reason=f"tool:{call.name}:{'ok' if result.success else 'err'}",
+                    )
+                )
 
                 # Append tool result for LLM
-                tool_message_content = (
-                    result.output if result.success else f"Error: {result.error}"
+                tool_message_content = result.output if result.success else f"Error: {result.error}"
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": call.id,
+                        "content": tool_message_content,
+                    }
                 )
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": call.id,
-                    "content": tool_message_content,
-                })
         else:
             # Loop exhausted without break — accept whatever current_result holds
             logger.warning("agent.tool_loop_exhausted", run_id=self._state.run_id)
@@ -236,15 +245,17 @@ class AgentStateMachine:
         if self._on_tool_event is None:
             return
         try:
-            await self._on_tool_event(ToolExecutionEvent(
-                agent_name=self._agent.name,
-                run_id=self._state.run_id,
-                tool_name=tool_name,
-                status=status,
-                duration_ms=kwargs.get("duration_ms", 0.0),
-                error=kwargs.get("error", ""),
-                summary=kwargs.get("summary", ""),
-            ))
+            await self._on_tool_event(
+                ToolExecutionEvent(
+                    agent_name=self._agent.name,
+                    run_id=self._state.run_id,
+                    tool_name=tool_name,
+                    status=status,
+                    duration_ms=kwargs.get("duration_ms", 0.0),
+                    error=kwargs.get("error", ""),
+                    summary=kwargs.get("summary", ""),
+                )
+            )
         except Exception:
             logger.exception("tool_event.emit_error", run_id=self._state.run_id)
 
@@ -256,7 +267,9 @@ class AgentStateMachine:
                 "current_result": self._state.current_result,
             },
         )
-        response = await self._call_llm([{"role": "system", "content": prompt}], expected_format="json")
+        response = await self._call_llm(
+            [{"role": "system", "content": prompt}], expected_format="json"
+        )
         self._accumulate_cost(response)
 
         try:

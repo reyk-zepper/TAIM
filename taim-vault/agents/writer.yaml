@@ -6,7 +6,10 @@ skills:
   - content_writing
   - editing
   - tone_adaptation
-tools: []
+tools:
+  - file_read
+  - file_write
+  - vault_memory_read
 max_iterations: 3
 requires_approval_for:
   - external_communication

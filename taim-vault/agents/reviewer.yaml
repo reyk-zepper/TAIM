@@ -6,6 +6,7 @@ skills:
   - quality_assessment
   - code_review
   - content_review
-tools: []
+tools:
+  - file_read
 max_iterations: 2
 requires_approval_for: []

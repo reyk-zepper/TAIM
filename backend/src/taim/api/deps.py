@@ -10,6 +10,7 @@ from taim.brain.agent_run_store import AgentRunStore
 from taim.brain.prompts import PromptLoader
 from taim.conversation import IntentInterpreter
 from taim.models.config import SystemConfig
+from taim.orchestrator.tools import ToolExecutor
 from taim.router.router import LLMRouter
 
 
@@ -46,3 +47,8 @@ def get_registry(request: Request) -> AgentRegistry:
 def get_agent_run_store(request: Request) -> AgentRunStore:
     """Inject the AgentRunStore singleton."""
     return request.app.state.agent_run_store
+
+
+def get_tool_executor(request: Request) -> ToolExecutor:
+    """Inject the ToolExecutor singleton."""
+    return request.app.state.tool_executor

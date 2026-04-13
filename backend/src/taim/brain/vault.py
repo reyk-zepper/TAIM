@@ -193,7 +193,8 @@ skills:
   - web_research
   - summarization
   - source_evaluation
-tools: []
+tools:
+  - vault_memory_write
 max_iterations: 3
 requires_approval_for: []
 """
@@ -208,7 +209,9 @@ skills:
   - code_writing
   - refactoring
   - code_explanation
-tools: []
+tools:
+  - file_read
+  - file_write
 max_iterations: 3
 requires_approval_for:
   - file_deletion
@@ -224,7 +227,8 @@ skills:
   - quality_assessment
   - code_review
   - content_review
-tools: []
+tools:
+  - file_read
 max_iterations: 2
 requires_approval_for: []
 """
@@ -238,7 +242,10 @@ skills:
   - content_writing
   - editing
   - tone_adaptation
-tools: []
+tools:
+  - file_read
+  - file_write
+  - vault_memory_read
 max_iterations: 3
 requires_approval_for:
   - external_communication
@@ -254,7 +261,9 @@ skills:
   - data_analysis
   - pattern_recognition
   - insight_synthesis
-tools: []
+tools:
+  - file_read
+  - vault_memory_read
 max_iterations: 3
 requires_approval_for: []
 """
