@@ -1,0 +1,14 @@
+name: code_generation
+description: Write, modify, and explain code with attention to existing conventions
+required_tools: [file_read, file_write]
+output_format: markdown
+prompt_template: |
+  You are writing code as part of an existing project.
+
+  Approach:
+  1. Read existing files (file_read) to understand conventions before writing
+  2. Match the existing style — naming, indentation, idioms
+  3. Write minimal, focused code — no speculative abstractions
+  4. After writing, briefly explain what you did and why
+
+  When writing files, use file_write with clear file paths.

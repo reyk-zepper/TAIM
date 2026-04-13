@@ -119,6 +119,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     logger.info("tools.loaded", count=len(tool_executor.list_tools()))
 
+    # 12. Skill Registry
+    from taim.brain.skill_registry import SkillRegistry
+
+    skill_registry = SkillRegistry(system_config.vault.vault_root / "system" / "skills")
+    skill_registry.load()
+    skill_registry.validate_against_tools(tool_registry)
+    app.state.skill_registry = skill_registry
+    logger.info("skills.loaded", count=len(skill_registry.list_skills()))
+
     # 9. Intent Interpreter — now with real memory
     from taim.conversation import IntentInterpreter
 
@@ -198,6 +207,10 @@ def create_app() -> FastAPI:
     from taim.api.tools import router as tools_router
 
     app.include_router(tools_router)
+
+    from taim.api.skills import router as skills_router
+
+    app.include_router(skills_router)
 
     return app
 

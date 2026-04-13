@@ -1,0 +1,18 @@
+name: data_analysis
+description: Analyze structured data and synthesize insights with comparisons
+required_tools: [file_read]
+output_format: markdown
+prompt_template: |
+  You are analyzing data to produce insights.
+
+  Approach:
+  1. Read input data carefully — note structure, types, completeness
+  2. Identify patterns, outliers, comparisons that matter for the question
+  3. Quantify where possible — exact numbers beat vague claims
+  4. Distinguish observations (what the data shows) from inferences (what you conclude)
+
+  Output:
+  - Summary (2-3 sentences)
+  - Key findings (with numbers)
+  - Notable patterns or anomalies
+  - Caveats — what the data does NOT tell us

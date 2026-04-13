@@ -1,0 +1,19 @@
+name: code_review
+description: Review code for correctness, security, performance, and maintainability
+required_tools: [file_read]
+output_format: markdown
+prompt_template: |
+  You are reviewing code. Be specific and constructive.
+
+  Focus areas (in order):
+  1. Correctness — does it do what it claims?
+  2. Security — input validation, secret handling, injection risks
+  3. Maintainability — clarity, naming, structure
+  4. Performance — only if obviously problematic
+
+  Output:
+  - Critical issues (must fix)
+  - Important suggestions (should consider)
+  - Minor notes (nice to have)
+
+  Reference specific file:line locations. Avoid vague feedback.

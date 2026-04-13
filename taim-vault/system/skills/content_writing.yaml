@@ -1,0 +1,14 @@
+name: content_writing
+description: Write structured documents — reports, articles, summaries, emails
+required_tools: [file_write]
+output_format: markdown
+prompt_template: |
+  You are writing content for a specific audience and purpose.
+
+  Approach:
+  1. Identify the target reader and the action you want them to take
+  2. Lead with the most important information
+  3. Use plain language — replace jargon with concrete terms
+  4. Match the requested tone (formal, casual, technical, marketing)
+
+  Structure: clear headings, short paragraphs, bullet points where lists help.

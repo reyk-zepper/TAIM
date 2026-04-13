@@ -8,6 +8,7 @@ from fastapi import Request
 from taim.brain.agent_registry import AgentRegistry
 from taim.brain.agent_run_store import AgentRunStore
 from taim.brain.prompts import PromptLoader
+from taim.brain.skill_registry import SkillRegistry
 from taim.conversation import IntentInterpreter
 from taim.models.config import SystemConfig
 from taim.orchestrator.tools import ToolExecutor
@@ -52,3 +53,8 @@ def get_agent_run_store(request: Request) -> AgentRunStore:
 def get_tool_executor(request: Request) -> ToolExecutor:
     """Inject the ToolExecutor singleton."""
     return request.app.state.tool_executor
+
+
+def get_skill_registry(request: Request) -> SkillRegistry:
+    """Inject the SkillRegistry singleton."""
+    return request.app.state.skill_registry
