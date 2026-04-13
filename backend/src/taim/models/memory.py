@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import ClassVar
 
 from pydantic import BaseModel, Field
@@ -41,7 +41,7 @@ class ChatMessage(BaseModel):
 
     role: str
     content: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class HotMemorySession(BaseModel):
