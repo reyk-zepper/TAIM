@@ -6,7 +6,6 @@ from taim.brain.agent_registry import AgentRegistry
 from taim.models.agent import Agent
 from taim.models.chat import IntentResult
 
-
 # Rule-based mapping: task_type substring → agent priority list
 _TASK_TYPE_TO_AGENTS = {
     "code_review": ["reviewer", "coder"],

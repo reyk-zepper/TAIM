@@ -122,9 +122,7 @@ class Orchestrator:
 
         # 6. Map agent outcome → task status
         status = (
-            TaskStatus.COMPLETED
-            if run.final_state == AgentStateEnum.DONE
-            else TaskStatus.FAILED
+            TaskStatus.COMPLETED if run.final_state == AgentStateEnum.DONE else TaskStatus.FAILED
         )
         tokens = run.prompt_tokens + run.completion_tokens
         await self._task_manager.set_status(

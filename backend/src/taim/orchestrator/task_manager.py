@@ -57,7 +57,8 @@ class TaskManager:
         agent_states: dict[str, str],
     ) -> None:
         await self._db.execute(
-            "UPDATE task_state SET agent_states = ?, updated_at = datetime('now') WHERE task_id = ?",
+            "UPDATE task_state SET agent_states = ?, updated_at = datetime('now')"
+            " WHERE task_id = ?",
             (json.dumps(agent_states), task_id),
         )
         await self._db.commit()
@@ -74,9 +75,14 @@ class TaskManager:
             rows = await cursor.fetchall()
         return [
             {
-                "task_id": r[0], "team_id": r[1], "status": r[2],
-                "objective": r[3], "token_total": r[4], "cost_total_eur": r[5],
-                "created_at": r[6], "completed_at": r[7],
+                "task_id": r[0],
+                "team_id": r[1],
+                "status": r[2],
+                "objective": r[3],
+                "token_total": r[4],
+                "cost_total_eur": r[5],
+                "created_at": r[6],
+                "completed_at": r[7],
             }
             for r in rows
         ]
