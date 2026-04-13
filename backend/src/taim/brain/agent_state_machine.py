@@ -9,10 +9,13 @@ from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 import structlog
+from jinja2 import StrictUndefined
+from jinja2.sandbox import SandboxedEnvironment
 from pydantic import BaseModel, ValidationError
 
 from taim.brain.agent_run_store import AgentRunStore
 from taim.brain.prompts import PromptLoader
+from taim.brain.skill_registry import SkillRegistry
 from taim.errors import AllProvidersFailed, PromptNotFoundError
 from taim.models.agent import (
     Agent,
@@ -44,6 +47,8 @@ class TransitionEvent(BaseModel):
 class AgentStateMachine:
     """Autonomous agent execution state machine."""
 
+    _jinja: SandboxedEnvironment = SandboxedEnvironment(undefined=StrictUndefined)
+
     def __init__(
         self,
         agent: Agent,
@@ -60,6 +65,7 @@ class AgentStateMachine:
         tool_context: dict[str, Any] | None = None,
         on_tool_event: Callable[[ToolExecutionEvent], Awaitable[None]] | None = None,
         run_id: str | None = None,
+        skill_registry: SkillRegistry | None = None,
     ) -> None:
         self._agent = agent
         self._router = router
@@ -74,6 +80,7 @@ class AgentStateMachine:
         self._tool_executor = tool_executor
         self._tool_context = tool_context
         self._on_tool_event = on_tool_event
+        self._skill_registry = skill_registry
         self._state = AgentState(
             agent_name=agent.name,
             run_id=run_id or str(uuid4()),
@@ -126,6 +133,29 @@ class AgentStateMachine:
         self._accumulate_cost(response)
         await self._transition(AgentStateEnum.EXECUTING, "planning_complete")
 
+    def _render_primary_skill(self) -> str:
+        """Return rendered primary skill prompt or empty string."""
+        if self._skill_registry is None or not self._agent.skills:
+            return ""
+        primary_name = self._agent.skills[0]
+        skill = self._skill_registry.get(primary_name)
+        if skill is None:
+            logger.warning(
+                "agent.skill_not_found",
+                agent=self._agent.name,
+                skill=primary_name,
+            )
+            return ""
+        try:
+            template = self._jinja.from_string(skill.prompt_template)
+            return template.render(
+                task_description=self._task_description,
+                agent_description=self._agent.description,
+            )
+        except Exception:
+            logger.exception("agent.skill_render_error", skill=primary_name)
+            return ""
+
     async def _do_executing(self) -> None:
         base_prompt = await self._load_state_prompt(
             AgentStateEnum.EXECUTING,
@@ -138,13 +168,16 @@ class AgentStateMachine:
             },
         )
 
+        skill_prefix = self._render_primary_skill()
+        full_prompt = (skill_prefix + "\n\n" + base_prompt) if skill_prefix else base_prompt
+
         tools = None
         if self._tool_executor and self._agent.tools:
             tools = self._tool_executor.get_tools_for_agent(self._agent.tools)
             if not tools:
                 tools = None  # Agent's allowed tools not registered — don't pass empty list
 
-        messages: list[dict] = [{"role": "system", "content": base_prompt}]
+        messages: list[dict] = [{"role": "system", "content": full_prompt}]
 
         max_tool_loops = 10
         for _ in range(max_tool_loops):
