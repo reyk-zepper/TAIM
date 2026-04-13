@@ -167,3 +167,12 @@ class TestDefaultTools:
         tools_dir = ops.vault_config.vault_root / "system" / "tools"
         for name in ["file_read", "file_write", "vault_memory_read", "vault_memory_write"]:
             assert (tools_dir / f"{name}.yaml").exists()
+
+
+class TestDefaultSkills:
+    def test_creates_five_skill_yamls(self, tmp_path: Path) -> None:
+        ops = VaultOps(tmp_path / "vault")
+        ops.ensure_vault()
+        skills_dir = ops.vault_config.vault_root / "system" / "skills"
+        for name in ["web_research", "code_generation", "code_review", "content_writing", "data_analysis"]:
+            assert (skills_dir / f"{name}.yaml").exists()

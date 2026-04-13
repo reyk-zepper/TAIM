@@ -1,0 +1,17 @@
+name: web_research
+description: Search the web, fetch pages, and synthesize findings from multiple sources
+required_tools: [web_search, web_fetch, file_write]
+output_format: markdown
+prompt_template: |
+  You are conducting web research on the task below.
+
+  Approach:
+  1. Use web_search to identify 3-5 high-quality sources
+  2. Use web_fetch to retrieve full content from the most promising
+  3. Cross-reference findings — never trust a single source
+  4. Cite specific URLs and quote when possible
+
+  Output a structured summary in markdown with:
+  - Key findings (bullet points)
+  - Sources (URL + 1-line description)
+  - Open questions or contradictions found

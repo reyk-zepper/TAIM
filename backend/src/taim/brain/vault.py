@@ -206,7 +206,7 @@ model_preference:
   - tier1_premium
   - tier2_standard
 skills:
-  - code_writing
+  - code_generation
   - refactoring
   - code_explanation
 tools:
@@ -224,8 +224,8 @@ description: Reviews work products for quality, completeness, and correctness
 model_preference:
   - tier1_premium
 skills:
-  - quality_assessment
   - code_review
+  - quality_assessment
   - content_review
 tools:
   - file_read
@@ -467,6 +467,103 @@ parameters:
   required: [title, content]
 """
 
+_DEFAULT_SKILL_WEB_RESEARCH = """\
+name: web_research
+description: Search the web, fetch pages, and synthesize findings from multiple sources
+required_tools: [web_search, web_fetch, file_write]
+output_format: markdown
+prompt_template: |
+  You are conducting web research on the task below.
+
+  Approach:
+  1. Use web_search to identify 3-5 high-quality sources
+  2. Use web_fetch to retrieve full content from the most promising
+  3. Cross-reference findings — never trust a single source
+  4. Cite specific URLs and quote when possible
+
+  Output a structured summary in markdown with:
+  - Key findings (bullet points)
+  - Sources (URL + 1-line description)
+  - Open questions or contradictions found
+"""
+
+_DEFAULT_SKILL_CODE_GENERATION = """\
+name: code_generation
+description: Write, modify, and explain code with attention to existing conventions
+required_tools: [file_read, file_write]
+output_format: markdown
+prompt_template: |
+  You are writing code as part of an existing project.
+
+  Approach:
+  1. Read existing files (file_read) to understand conventions before writing
+  2. Match the existing style — naming, indentation, idioms
+  3. Write minimal, focused code — no speculative abstractions
+  4. After writing, briefly explain what you did and why
+
+  When writing files, use file_write with clear file paths.
+"""
+
+_DEFAULT_SKILL_CODE_REVIEW = """\
+name: code_review
+description: Review code for correctness, security, performance, and maintainability
+required_tools: [file_read]
+output_format: markdown
+prompt_template: |
+  You are reviewing code. Be specific and constructive.
+
+  Focus areas (in order):
+  1. Correctness — does it do what it claims?
+  2. Security — input validation, secret handling, injection risks
+  3. Maintainability — clarity, naming, structure
+  4. Performance — only if obviously problematic
+
+  Output:
+  - Critical issues (must fix)
+  - Important suggestions (should consider)
+  - Minor notes (nice to have)
+
+  Reference specific file:line locations. Avoid vague feedback.
+"""
+
+_DEFAULT_SKILL_CONTENT_WRITING = """\
+name: content_writing
+description: Write structured documents — reports, articles, summaries, emails
+required_tools: [file_write]
+output_format: markdown
+prompt_template: |
+  You are writing content for a specific audience and purpose.
+
+  Approach:
+  1. Identify the target reader and the action you want them to take
+  2. Lead with the most important information
+  3. Use plain language — replace jargon with concrete terms
+  4. Match the requested tone (formal, casual, technical, marketing)
+
+  Structure: clear headings, short paragraphs, bullet points where lists help.
+"""
+
+_DEFAULT_SKILL_DATA_ANALYSIS = """\
+name: data_analysis
+description: Analyze structured data and synthesize insights with comparisons
+required_tools: [file_read]
+output_format: markdown
+prompt_template: |
+  You are analyzing data to produce insights.
+
+  Approach:
+  1. Read input data carefully — note structure, types, completeness
+  2. Identify patterns, outliers, comparisons that matter for the question
+  3. Quantify where possible — exact numbers beat vague claims
+  4. Distinguish observations (what the data shows) from inferences (what you conclude)
+
+  Output:
+  - Summary (2-3 sentences)
+  - Key findings (with numbers)
+  - Notable patterns or anomalies
+  - Caveats — what the data does NOT tell us
+"""
+
 
 class VaultOps:
     """Filesystem operations for the tAIm Vault."""
@@ -514,6 +611,7 @@ class VaultOps:
         self._ensure_default_agents()
         self._ensure_default_state_prompts()
         self._ensure_default_tools()
+        self._ensure_default_skills()
 
     def load_raw_yaml(self, filename: str) -> dict:
         """Load a YAML file from the config directory."""
@@ -629,5 +727,21 @@ class VaultOps:
         }
         for filename, content in defaults.items():
             path = tools_dir / filename
+            if not path.exists():
+                path.write_text(content, encoding="utf-8")
+
+    def _ensure_default_skills(self) -> None:
+        """Seed default skill YAML definitions."""
+        skills_dir = self.vault_config.vault_root / "system" / "skills"
+        skills_dir.mkdir(parents=True, exist_ok=True)
+        defaults = {
+            "web_research.yaml": _DEFAULT_SKILL_WEB_RESEARCH,
+            "code_generation.yaml": _DEFAULT_SKILL_CODE_GENERATION,
+            "code_review.yaml": _DEFAULT_SKILL_CODE_REVIEW,
+            "content_writing.yaml": _DEFAULT_SKILL_CONTENT_WRITING,
+            "data_analysis.yaml": _DEFAULT_SKILL_DATA_ANALYSIS,
+        }
+        for filename, content in defaults.items():
+            path = skills_dir / filename
             if not path.exists():
                 path.write_text(content, encoding="utf-8")
