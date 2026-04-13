@@ -5,6 +5,8 @@ from __future__ import annotations
 import aiosqlite
 from fastapi import Request
 
+from taim.brain.agent_registry import AgentRegistry
+from taim.brain.agent_run_store import AgentRunStore
 from taim.brain.prompts import PromptLoader
 from taim.conversation import IntentInterpreter
 from taim.models.config import SystemConfig
@@ -34,3 +36,13 @@ def get_router(request: Request) -> LLMRouter:
 def get_interpreter(request: Request) -> IntentInterpreter:
     """Inject the IntentInterpreter singleton."""
     return request.app.state.interpreter
+
+
+def get_registry(request: Request) -> AgentRegistry:
+    """Inject the AgentRegistry singleton."""
+    return request.app.state.agent_registry
+
+
+def get_agent_run_store(request: Request) -> AgentRunStore:
+    """Inject the AgentRunStore singleton."""
+    return request.app.state.agent_run_store

@@ -1,0 +1,12 @@
+name: researcher
+description: Researches topics using web sources and summarizes findings
+model_preference:
+  - tier2_standard
+  - tier3_economy
+skills:
+  - web_research
+  - summarization
+  - source_evaluation
+tools: []
+max_iterations: 3
+requires_approval_for: []

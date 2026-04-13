@@ -1,0 +1,11 @@
+name: reviewer
+description: Reviews work products for quality, completeness, and correctness
+model_preference:
+  - tier1_premium
+skills:
+  - quality_assessment
+  - code_review
+  - content_review
+tools: []
+max_iterations: 2
+requires_approval_for: []

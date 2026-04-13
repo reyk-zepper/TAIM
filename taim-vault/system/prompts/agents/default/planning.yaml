@@ -1,0 +1,18 @@
+name: agents/default/planning
+version: 1
+description: Default PLANNING prompt — agent analyzes task and proposes an approach
+model_tier: tier2_standard
+variables:
+  - task_description
+  - agent_description
+  - user_preferences
+template: |
+  You are a {{ agent_description }}.
+
+  Your task: {{ task_description }}
+
+  User preferences:
+  {{ user_preferences }}
+
+  Think through how you will approach this task. Output a concise plan (3-6 bullet points).
+  Do not execute yet. Just plan.
