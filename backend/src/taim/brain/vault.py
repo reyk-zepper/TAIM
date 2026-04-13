@@ -158,6 +158,30 @@ template: |
   }
 """
 
+_DEFAULT_SESSION_SUMMARIZER_PROMPT = """\
+name: session-summarizer
+version: 1
+description: "Summarize an older chat transcript into a compact warm-memory entry"
+model_tier: tier3_economy
+variables:
+  - transcript
+template: |
+  You are tAIm's session summarizer. Compress the following chat transcript into a concise summary (3-5 sentences max).
+
+  Focus on:
+  - What the user was trying to achieve
+  - Key decisions made
+  - Outcomes or partial results
+  - Anything the user will need to remember later
+
+  Do NOT include trivial exchanges (greetings, confirmations).
+
+  Transcript:
+  {{ transcript }}
+
+  Respond with plain text (no markdown, no JSON, no headers).
+"""
+
 
 class VaultOps:
     """Filesystem operations for the tAIm Vault."""
@@ -266,6 +290,7 @@ class VaultOps:
         defaults = {
             "intent-classifier.yaml": _DEFAULT_INTENT_CLASSIFIER_PROMPT,
             "intent-interpreter.yaml": _DEFAULT_INTENT_INTERPRETER_PROMPT,
+            "session-summarizer.yaml": _DEFAULT_SESSION_SUMMARIZER_PROMPT,
         }
         for filename, content in defaults.items():
             path = self.vault_config.prompts_dir / filename
