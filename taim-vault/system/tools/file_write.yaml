@@ -1,0 +1,18 @@
+name: file_write
+description: Write or append text content to a file in the vault or workspace
+requires_approval: true
+source: builtin
+parameters:
+  type: object
+  properties:
+    path:
+      type: string
+      description: Path within vault/workspace
+    content:
+      type: string
+      description: Text content to write
+    mode:
+      type: string
+      enum: [overwrite, append]
+      default: overwrite
+  required: [path, content]

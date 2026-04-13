@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 import structlog
@@ -22,6 +23,10 @@ from taim.models.agent import (
     StateTransition,
 )
 from taim.models.router import ModelTierEnum
+from taim.models.tool import ToolCall, ToolExecutionEvent
+
+if TYPE_CHECKING:
+    from taim.orchestrator.tools import ToolExecutor
 
 logger = structlog.get_logger()
 
@@ -51,6 +56,9 @@ class AgentStateMachine:
         team_id: str = "",
         user_preferences: str = "",
         on_transition: Callable[[TransitionEvent], Awaitable[None]] | None = None,
+        tool_executor: ToolExecutor | None = None,
+        tool_context: dict[str, Any] | None = None,
+        on_tool_event: Callable[[ToolExecutionEvent], Awaitable[None]] | None = None,
         run_id: str | None = None,
     ) -> None:
         self._agent = agent
@@ -63,6 +71,9 @@ class AgentStateMachine:
         self._team_id = team_id
         self._user_preferences = user_preferences or "(no preferences yet)"
         self._on_transition = on_transition
+        self._tool_executor = tool_executor
+        self._tool_context = tool_context
+        self._on_tool_event = on_tool_event
         self._state = AgentState(
             agent_name=agent.name,
             run_id=run_id or str(uuid4()),
@@ -110,13 +121,13 @@ class AgentStateMachine:
                 "user_preferences": self._user_preferences,
             },
         )
-        response = await self._call_llm(prompt)
+        response = await self._call_llm([{"role": "system", "content": prompt}])
         self._state.plan = response.content
         self._accumulate_cost(response)
         await self._transition(AgentStateEnum.EXECUTING, "planning_complete")
 
     async def _do_executing(self) -> None:
-        prompt = await self._load_state_prompt(
+        base_prompt = await self._load_state_prompt(
             AgentStateEnum.EXECUTING,
             {
                 "task_description": self._task_description,
@@ -126,10 +137,127 @@ class AgentStateMachine:
                 "user_preferences": self._user_preferences,
             },
         )
-        response = await self._call_llm(prompt)
-        self._state.current_result = response.content
-        self._accumulate_cost(response)
+
+        tools = None
+        if self._tool_executor and self._agent.tools:
+            tools = self._tool_executor.get_tools_for_agent(self._agent.tools)
+            if not tools:
+                tools = None  # Agent's allowed tools not registered — don't pass empty list
+
+        messages: list[dict] = [{"role": "system", "content": base_prompt}]
+
+        max_tool_loops = 10
+        for _ in range(max_tool_loops):
+            response = await self._call_llm(messages, tools=tools)
+            self._accumulate_cost(response)
+
+            if not response.tool_calls:
+                self._state.current_result = response.content
+                break
+
+            # Append assistant's tool_calls message
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": response.content or "",
+                    "tool_calls": [
+                        {
+                            "id": tc["id"],
+                            "type": "function",
+                            "function": {"name": tc["name"], "arguments": tc["arguments"]},
+                        }
+                        for tc in response.tool_calls
+                    ],
+                }
+            )
+
+            # Execute each tool call and append results
+            for tc_raw in response.tool_calls:
+                args_raw = tc_raw["arguments"]
+                if isinstance(args_raw, str):
+                    try:
+                        args = json.loads(args_raw)
+                    except json.JSONDecodeError:
+                        args = {}
+                else:
+                    args = args_raw
+                call = ToolCall(id=tc_raw["id"], name=tc_raw["name"], arguments=args)
+
+                await self._emit_tool_event(
+                    call.name,
+                    "running",
+                    summary=self._summarize_call(call),
+                )
+                result = await self._tool_executor.execute(call, self._tool_context or {})
+                await self._emit_tool_event(
+                    call.name,
+                    "completed" if result.success else "failed",
+                    duration_ms=result.duration_ms,
+                    error=result.error,
+                    summary=self._summarize_result(result),
+                )
+
+                # Track in state history (lightweight audit)
+                self._state.state_history.append(
+                    StateTransition(
+                        from_state=AgentStateEnum.EXECUTING,
+                        to_state=AgentStateEnum.EXECUTING,
+                        timestamp=datetime.now(UTC),
+                        reason=f"tool:{call.name}:{'ok' if result.success else 'err'}",
+                    )
+                )
+
+                # Append tool result for LLM
+                tool_message_content = result.output if result.success else f"Error: {result.error}"
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": call.id,
+                        "content": tool_message_content,
+                    }
+                )
+        else:
+            # Loop exhausted without break — accept whatever current_result holds
+            logger.warning("agent.tool_loop_exhausted", run_id=self._state.run_id)
+            if not self._state.current_result:
+                self._state.current_result = "(tool loop exhausted without final response)"
+
         await self._transition(AgentStateEnum.REVIEWING, "execution_complete")
+
+    def _summarize_call(self, call: ToolCall) -> str:
+        if call.name == "file_read":
+            return f"Reading file {call.arguments.get('path', '?')}"
+        if call.name == "file_write":
+            return f"Writing to {call.arguments.get('path', '?')}"
+        if call.name == "vault_memory_read":
+            return f"Reading memory: {call.arguments.get('filename', '?')}"
+        if call.name == "vault_memory_write":
+            return f"Saving memory: {call.arguments.get('title', '?')}"
+        return f"Running {call.name}"
+
+    def _summarize_result(self, result) -> str:
+        if not result.success:
+            return f"Failed: {result.error[:80]}"
+        snippet = (result.output or "")[:80].replace("\n", " ")
+        return snippet
+
+    async def _emit_tool_event(self, tool_name: str, status: str, **kwargs) -> None:
+        if self._on_tool_event is None:
+            return
+        try:
+            await self._on_tool_event(
+                ToolExecutionEvent(
+                    agent_name=self._agent.name,
+                    run_id=self._state.run_id,
+                    tool_name=tool_name,
+                    status=status,
+                    duration_ms=kwargs.get("duration_ms", 0.0),
+                    error=kwargs.get("error", ""),
+                    summary=kwargs.get("summary", ""),
+                )
+            )
+        except Exception:
+            logger.exception("tool_event.emit_error", run_id=self._state.run_id)
 
     async def _do_reviewing(self) -> None:
         prompt = await self._load_state_prompt(
@@ -139,7 +267,9 @@ class AgentStateMachine:
                 "current_result": self._state.current_result,
             },
         )
-        response = await self._call_llm(prompt, expected_format="json")
+        response = await self._call_llm(
+            [{"role": "system", "content": prompt}], expected_format="json"
+        )
         self._accumulate_cost(response)
 
         try:
@@ -177,7 +307,7 @@ class AgentStateMachine:
                 "review_feedback": self._state.review_feedback,
             },
         )
-        response = await self._call_llm(prompt)
+        response = await self._call_llm([{"role": "system", "content": prompt}])
         self._state.current_result = response.content
         self._accumulate_cost(response)
         await self._transition(
@@ -202,15 +332,25 @@ class AgentStateMachine:
                 variables,
             )
 
-    async def _call_llm(self, prompt: str, expected_format: str | None = None):
+    async def _call_llm(
+        self,
+        messages: list[dict] | str,
+        expected_format: str | None = None,
+        tools: list[dict] | None = None,
+    ):
+        # If a single prompt string is passed, wrap it for backward compatibility
+        if isinstance(messages, str):
+            messages = [{"role": "system", "content": messages}]
+
         tier_str = (
             self._agent.model_preference[0] if self._agent.model_preference else "tier2_standard"
         )
         tier = ModelTierEnum(tier_str)
         return await self._router.complete(
-            messages=[{"role": "system", "content": prompt}],
+            messages=messages,
             tier=tier,
             expected_format=expected_format,
+            tools=tools,
             task_id=self._task_id,
             session_id=self._session_id,
             agent_run_id=self._state.run_id,

@@ -45,6 +45,7 @@ class LLMRouter:
         task_id: str | None = None,
         agent_run_id: str | None = None,
         session_id: str | None = None,
+        tools: list[dict] | None = None,
     ) -> LLMResponse:
         """Route an LLM call with failover. Max 3 attempts."""
         candidates = self._tier_resolver.resolve(tier)
@@ -81,10 +82,11 @@ class LLMRouter:
                     provider=provider_name,
                     api_key=api_key,
                     api_base=api_base,
+                    tools=tools,
                 )
 
                 # Format validation
-                if expected_format == "json":
+                if expected_format == "json" and not tools:
                     try:
                         json.loads(response.content)
                     except json.JSONDecodeError:

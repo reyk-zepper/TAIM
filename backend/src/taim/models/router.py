@@ -38,6 +38,7 @@ class LLMResponse(BaseModel):
     latency_ms: float
     failover_occurred: bool = False
     attempts: int = 1
+    tool_calls: list[dict] = []
 
 
 class TokenUsage(BaseModel):

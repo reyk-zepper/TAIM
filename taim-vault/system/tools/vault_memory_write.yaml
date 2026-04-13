@@ -1,0 +1,21 @@
+name: vault_memory_write
+description: Save a new memory entry to the user's persistent vault memory
+requires_approval: false
+source: builtin
+parameters:
+  type: object
+  properties:
+    title:
+      type: string
+    content:
+      type: string
+    tags:
+      type: array
+      items: { type: string }
+    category:
+      type: string
+      default: agent-output
+    user:
+      type: string
+      default: default
+  required: [title, content]

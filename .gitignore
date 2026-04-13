@@ -44,6 +44,7 @@ Thumbs.db
 taim-vault/system/state/
 taim-vault/system/audit/
 taim-vault/users/*/history/
+taim-vault/users/default/
 
 # Accidental vault when running uvicorn from backend/
 backend/taim-vault/

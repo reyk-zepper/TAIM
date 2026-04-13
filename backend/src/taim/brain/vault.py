@@ -193,7 +193,8 @@ skills:
   - web_research
   - summarization
   - source_evaluation
-tools: []
+tools:
+  - vault_memory_write
 max_iterations: 3
 requires_approval_for: []
 """
@@ -208,7 +209,9 @@ skills:
   - code_writing
   - refactoring
   - code_explanation
-tools: []
+tools:
+  - file_read
+  - file_write
 max_iterations: 3
 requires_approval_for:
   - file_deletion
@@ -224,7 +227,8 @@ skills:
   - quality_assessment
   - code_review
   - content_review
-tools: []
+tools:
+  - file_read
 max_iterations: 2
 requires_approval_for: []
 """
@@ -238,7 +242,10 @@ skills:
   - content_writing
   - editing
   - tone_adaptation
-tools: []
+tools:
+  - file_read
+  - file_write
+  - vault_memory_read
 max_iterations: 3
 requires_approval_for:
   - external_communication
@@ -254,7 +261,9 @@ skills:
   - data_analysis
   - pattern_recognition
   - insight_synthesis
-tools: []
+tools:
+  - file_read
+  - vault_memory_read
 max_iterations: 3
 requires_approval_for: []
 """
@@ -382,6 +391,82 @@ template: |
   Execute the plan. Cite sources. Avoid speculation.
 """
 
+_DEFAULT_TOOL_FILE_READ = """\
+name: file_read
+description: Read the contents of a text file from the vault or workspace
+requires_approval: false
+source: builtin
+parameters:
+  type: object
+  properties:
+    path:
+      type: string
+      description: Absolute or relative path within vault/workspace
+  required: [path]
+"""
+
+_DEFAULT_TOOL_FILE_WRITE = """\
+name: file_write
+description: Write or append text content to a file in the vault or workspace
+requires_approval: true
+source: builtin
+parameters:
+  type: object
+  properties:
+    path:
+      type: string
+      description: Path within vault/workspace
+    content:
+      type: string
+      description: Text content to write
+    mode:
+      type: string
+      enum: [overwrite, append]
+      default: overwrite
+  required: [path, content]
+"""
+
+_DEFAULT_TOOL_VAULT_MEMORY_READ = """\
+name: vault_memory_read
+description: Read a memory entry from the user's persistent vault memory
+requires_approval: false
+source: builtin
+parameters:
+  type: object
+  properties:
+    filename:
+      type: string
+      description: Memory file name (e.g., "preferences.md")
+    user:
+      type: string
+      default: default
+  required: [filename]
+"""
+
+_DEFAULT_TOOL_VAULT_MEMORY_WRITE = """\
+name: vault_memory_write
+description: Save a new memory entry to the user's persistent vault memory
+requires_approval: false
+source: builtin
+parameters:
+  type: object
+  properties:
+    title:
+      type: string
+    content:
+      type: string
+    tags:
+      type: array
+      items: { type: string }
+    category:
+      type: string
+      default: agent-output
+    user:
+      type: string
+      default: default
+  required: [title, content]
+"""
+
 
 class VaultOps:
     """Filesystem operations for the tAIm Vault."""
@@ -428,6 +513,7 @@ class VaultOps:
         self._ensure_default_prompts()
         self._ensure_default_agents()
         self._ensure_default_state_prompts()
+        self._ensure_default_tools()
 
     def load_raw_yaml(self, filename: str) -> dict:
         """Load a YAML file from the config directory."""
@@ -528,5 +614,20 @@ class VaultOps:
             researcher_dir / "executing.yaml": _RESEARCHER_EXECUTING_OVERRIDE,
         }
         for path, content in defaults.items():
+            if not path.exists():
+                path.write_text(content, encoding="utf-8")
+
+    def _ensure_default_tools(self) -> None:
+        """Seed default tool YAML schema definitions."""
+        tools_dir = self.vault_config.vault_root / "system" / "tools"
+        tools_dir.mkdir(parents=True, exist_ok=True)
+        defaults = {
+            "file_read.yaml": _DEFAULT_TOOL_FILE_READ,
+            "file_write.yaml": _DEFAULT_TOOL_FILE_WRITE,
+            "vault_memory_read.yaml": _DEFAULT_TOOL_VAULT_MEMORY_READ,
+            "vault_memory_write.yaml": _DEFAULT_TOOL_VAULT_MEMORY_WRITE,
+        }
+        for filename, content in defaults.items():
+            path = tools_dir / filename
             if not path.exists():
                 path.write_text(content, encoding="utf-8")
