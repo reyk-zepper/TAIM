@@ -135,3 +135,11 @@ class TestDefaultPrompts:
         prompt_path.write_text("custom: true\n")
         ops.ensure_vault()
         assert prompt_path.read_text() == "custom: true\n"
+
+
+class TestDefaultAgents:
+    def test_creates_five_agents(self, tmp_path: Path) -> None:
+        ops = VaultOps(tmp_path / "vault")
+        ops.ensure_vault()
+        for name in ["researcher", "coder", "reviewer", "writer", "analyst"]:
+            assert (ops.vault_config.agents_dir / f"{name}.yaml").exists()

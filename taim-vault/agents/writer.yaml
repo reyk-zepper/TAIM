@@ -1,0 +1,12 @@
+name: writer
+description: Creates written content — articles, emails, documentation
+model_preference:
+  - tier2_standard
+skills:
+  - content_writing
+  - editing
+  - tone_adaptation
+tools: []
+max_iterations: 3
+requires_approval_for:
+  - external_communication

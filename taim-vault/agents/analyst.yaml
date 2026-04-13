@@ -1,0 +1,12 @@
+name: analyst
+description: Analyzes data and synthesizes insights
+model_preference:
+  - tier1_premium
+  - tier2_standard
+skills:
+  - data_analysis
+  - pattern_recognition
+  - insight_synthesis
+tools: []
+max_iterations: 3
+requires_approval_for: []

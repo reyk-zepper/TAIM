@@ -183,6 +183,82 @@ template: |
   Respond with plain text (no markdown, no JSON, no headers).
 """
 
+_DEFAULT_AGENT_RESEARCHER = """\
+name: researcher
+description: Researches topics using web sources and summarizes findings
+model_preference:
+  - tier2_standard
+  - tier3_economy
+skills:
+  - web_research
+  - summarization
+  - source_evaluation
+tools: []
+max_iterations: 3
+requires_approval_for: []
+"""
+
+_DEFAULT_AGENT_CODER = """\
+name: coder
+description: Writes, edits, and explains code
+model_preference:
+  - tier1_premium
+  - tier2_standard
+skills:
+  - code_writing
+  - refactoring
+  - code_explanation
+tools: []
+max_iterations: 3
+requires_approval_for:
+  - file_deletion
+  - external_communication
+"""
+
+_DEFAULT_AGENT_REVIEWER = """\
+name: reviewer
+description: Reviews work products for quality, completeness, and correctness
+model_preference:
+  - tier1_premium
+skills:
+  - quality_assessment
+  - code_review
+  - content_review
+tools: []
+max_iterations: 2
+requires_approval_for: []
+"""
+
+_DEFAULT_AGENT_WRITER = """\
+name: writer
+description: Creates written content — articles, emails, documentation
+model_preference:
+  - tier2_standard
+skills:
+  - content_writing
+  - editing
+  - tone_adaptation
+tools: []
+max_iterations: 3
+requires_approval_for:
+  - external_communication
+"""
+
+_DEFAULT_AGENT_ANALYST = """\
+name: analyst
+description: Analyzes data and synthesizes insights
+model_preference:
+  - tier1_premium
+  - tier2_standard
+skills:
+  - data_analysis
+  - pattern_recognition
+  - insight_synthesis
+tools: []
+max_iterations: 3
+requires_approval_for: []
+"""
+
 
 class VaultOps:
     """Filesystem operations for the tAIm Vault."""
@@ -227,6 +303,7 @@ class VaultOps:
 
         self._ensure_default_configs()
         self._ensure_default_prompts()
+        self._ensure_default_agents()
 
     def load_raw_yaml(self, filename: str) -> dict:
         """Load a YAML file from the config directory."""
@@ -295,5 +372,19 @@ class VaultOps:
         }
         for filename, content in defaults.items():
             path = self.vault_config.prompts_dir / filename
+            if not path.exists():
+                path.write_text(content, encoding="utf-8")
+
+    def _ensure_default_agents(self) -> None:
+        """Write default agent YAML files only if they don't exist."""
+        defaults = {
+            "researcher.yaml": _DEFAULT_AGENT_RESEARCHER,
+            "coder.yaml": _DEFAULT_AGENT_CODER,
+            "reviewer.yaml": _DEFAULT_AGENT_REVIEWER,
+            "writer.yaml": _DEFAULT_AGENT_WRITER,
+            "analyst.yaml": _DEFAULT_AGENT_ANALYST,
+        }
+        for filename, content in defaults.items():
+            path = self.vault_config.agents_dir / filename
             if not path.exists():
                 path.write_text(content, encoding="utf-8")
