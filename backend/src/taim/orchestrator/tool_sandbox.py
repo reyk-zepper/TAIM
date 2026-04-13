@@ -27,7 +27,6 @@ def resolve_safe_path(
     raise ToolSandboxError(
         user_message="The requested file path is outside the allowed workspace.",
         detail=(
-            f"Path '{requested}' resolved to {target}, "
-            f"not within {[str(r) for r in allowed_roots]}"
+            f"Path '{requested}' resolved to {target}, not within {[str(r) for r in allowed_roots]}"
         ),
     )

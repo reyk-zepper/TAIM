@@ -41,7 +41,8 @@ class ToolExecutor:
 
     def list_tools(self) -> list[Tool]:
         return [
-            t for t in self._registry.list_schemas()
+            t
+            for t in self._registry.list_schemas()
             if t.name in self._executors and t.name not in self._denylist
         ]
 
@@ -49,14 +50,16 @@ class ToolExecutor:
         result = []
         for tool in self.list_tools():
             if tool.name in allowed_names:
-                result.append({
-                    "type": "function",
-                    "function": {
-                        "name": tool.name,
-                        "description": tool.description,
-                        "parameters": tool.parameters,
-                    },
-                })
+                result.append(
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": tool.name,
+                            "description": tool.description,
+                            "parameters": tool.parameters,
+                        },
+                    }
+                )
         return result
 
     async def execute(
@@ -66,7 +69,9 @@ class ToolExecutor:
     ) -> ToolResult:
         if call.name in self._denylist:
             return ToolResult(
-                call_id=call.id, tool_name=call.name, success=False,
+                call_id=call.id,
+                tool_name=call.name,
+                success=False,
                 error=f"Tool '{call.name}' is disabled by global denylist.",
             )
 
@@ -74,7 +79,9 @@ class ToolExecutor:
         executor = self._executors.get(call.name)
         if schema is None or executor is None:
             return ToolResult(
-                call_id=call.id, tool_name=call.name, success=False,
+                call_id=call.id,
+                tool_name=call.name,
+                success=False,
                 error=f"Tool '{call.name}' is not available.",
             )
 
@@ -82,7 +89,9 @@ class ToolExecutor:
             jsonschema.validate(call.arguments, schema.parameters)
         except jsonschema.ValidationError as e:
             return ToolResult(
-                call_id=call.id, tool_name=call.name, success=False,
+                call_id=call.id,
+                tool_name=call.name,
+                success=False,
                 error=f"Invalid arguments: {e.message}",
             )
 
@@ -90,12 +99,18 @@ class ToolExecutor:
         try:
             output = await executor(call.arguments, context or {})
             return ToolResult(
-                call_id=call.id, tool_name=call.name, success=True,
-                output=output, duration_ms=(time.monotonic() - start) * 1000,
+                call_id=call.id,
+                tool_name=call.name,
+                success=True,
+                output=output,
+                duration_ms=(time.monotonic() - start) * 1000,
             )
         except Exception as e:  # noqa: BLE001 — tool errors must not crash agent
             logger.exception("tool_executor.error", tool=call.name)
             return ToolResult(
-                call_id=call.id, tool_name=call.name, success=False,
-                error=str(e), duration_ms=(time.monotonic() - start) * 1000,
+                call_id=call.id,
+                tool_name=call.name,
+                success=False,
+                error=str(e),
+                duration_ms=(time.monotonic() - start) * 1000,
             )
