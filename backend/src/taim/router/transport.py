@@ -21,6 +21,7 @@ class LLMTransport:
         api_key: str | None = None,
         api_base: str | None = None,
         timeout: float = 30.0,
+        tools: list[dict] | None = None,
     ) -> LLMResponse:
         """Make one LLM call. Returns LLMResponse or raises LLMTransportError."""
         litellm_model = f"{provider}/{model}"
@@ -36,6 +37,9 @@ class LLMTransport:
             kwargs["api_key"] = api_key
         if api_base:
             kwargs["api_base"] = api_base
+        if tools:
+            kwargs["tools"] = tools
+            kwargs["tool_choice"] = "auto"
 
         try:
             response = await litellm.acompletion(**kwargs)
@@ -54,18 +58,29 @@ class LLMTransport:
 
         elapsed_ms = (time.monotonic() - start) * 1000
         usage = response.usage
+        msg = response.choices[0].message
 
         try:
             cost = litellm.completion_cost(completion_response=response)
         except Exception:
             cost = 0.0
 
+        tool_calls_raw: list[dict] = []
+        if hasattr(msg, "tool_calls") and msg.tool_calls:
+            for tc in msg.tool_calls:
+                tool_calls_raw.append({
+                    "id": tc.id,
+                    "name": tc.function.name,
+                    "arguments": tc.function.arguments,
+                })
+
         return LLMResponse(
-            content=response.choices[0].message.content or "",
+            content=msg.content or "",
             model=model,
             provider=provider,
             prompt_tokens=usage.prompt_tokens,
             completion_tokens=usage.completion_tokens,
             cost_usd=cost,
             latency_ms=elapsed_ms,
+            tool_calls=tool_calls_raw,
         )
