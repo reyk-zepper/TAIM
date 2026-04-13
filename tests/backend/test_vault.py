@@ -119,3 +119,19 @@ class TestLoadProductConfig:
         assert "tier1_premium" in config.tiering
         assert config.conversation_verbosity == "normal"
         assert config.usd_to_eur_rate == 0.92
+
+
+class TestDefaultPrompts:
+    def test_creates_intent_prompts(self, tmp_path) -> None:
+        ops = VaultOps(tmp_path / "vault")
+        ops.ensure_vault()
+        assert (ops.vault_config.prompts_dir / "intent-classifier.yaml").exists()
+        assert (ops.vault_config.prompts_dir / "intent-interpreter.yaml").exists()
+
+    def test_does_not_overwrite_existing_prompts(self, tmp_path) -> None:
+        ops = VaultOps(tmp_path / "vault")
+        ops.ensure_vault()
+        prompt_path = ops.vault_config.prompts_dir / "intent-classifier.yaml"
+        prompt_path.write_text("custom: true\n")
+        ops.ensure_vault()
+        assert prompt_path.read_text() == "custom: true\n"
