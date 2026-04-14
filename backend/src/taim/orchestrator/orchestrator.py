@@ -176,9 +176,7 @@ class Orchestrator:
             task_description = base_task_description
             if previous_result:
                 truncated = previous_result[:4000]  # ~1000 tokens cap (US-5.3 AC3)
-                task_description += (
-                    f"\n\nPrevious agent ({previous_agent}) output:\n{truncated}"
-                )
+                task_description += f"\n\nPrevious agent ({previous_agent}) output:\n{truncated}"
 
             try:
                 sm = AgentStateMachine(
@@ -232,7 +230,9 @@ class Orchestrator:
                 )
 
         await self._task_manager.set_status(
-            plan.task_id, TaskStatus.COMPLETED, cost_eur=total_cost,
+            plan.task_id,
+            TaskStatus.COMPLETED,
+            cost_eur=total_cost,
         )
 
         return TaskExecutionResult(
