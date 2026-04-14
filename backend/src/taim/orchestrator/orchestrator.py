@@ -16,7 +16,7 @@ from taim.brain.prompts import PromptLoader
 from taim.brain.skill_registry import SkillRegistry
 from taim.models.agent import AgentStateEnum
 from taim.models.chat import IntentResult
-from taim.models.orchestration import TaskExecutionResult, TaskPlan, TaskStatus
+from taim.models.orchestration import TaskExecutionResult, TaskPlan, TaskStatus, TeamAgentSlot
 from taim.models.tool import ToolExecutionEvent
 from taim.orchestrator.task_manager import TaskManager
 from taim.orchestrator.team_composer import TeamComposer
@@ -81,7 +81,7 @@ class Orchestrator:
             task_id=task_id,
             objective=intent.objective,
             parameters=intent.parameters,
-            agent_name=agent.name,
+            agents=[TeamAgentSlot(role="primary", agent_name=agent.name)],
         )
 
         # 3. Create task_state row

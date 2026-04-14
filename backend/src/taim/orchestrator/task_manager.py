@@ -16,7 +16,7 @@ class TaskManager:
         self._db = db
 
     async def create(self, plan: TaskPlan, team_id: str = "") -> None:
-        agent_states_json = json.dumps({plan.agent_name: "pending"})
+        agent_states_json = json.dumps({slot.agent_name: "pending" for slot in plan.agents})
         await self._db.execute(
             """INSERT INTO task_state
                (task_id, team_id, status, objective, agent_states, token_total, cost_total_eur)

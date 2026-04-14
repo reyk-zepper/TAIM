@@ -11,7 +11,7 @@ from httpx import ASGITransport, AsyncClient
 
 from taim.api.tasks import router as tasks_router
 from taim.brain.database import init_database
-from taim.models.orchestration import TaskPlan, TaskStatus
+from taim.models.orchestration import TaskPlan, TaskStatus, TeamAgentSlot
 from taim.orchestrator.task_manager import TaskManager
 
 
@@ -40,7 +40,7 @@ class TestListTasks:
 
     async def test_returns_created_tasks(self, client_and_mgr) -> None:
         client, mgr = client_and_mgr
-        plan = TaskPlan(task_id="t1", objective="test obj", agent_name="researcher")
+        plan = TaskPlan(task_id="t1", objective="test obj", agents=[TeamAgentSlot(role="primary", agent_name="researcher")])
         await mgr.create(plan)
         await mgr.set_status("t1", TaskStatus.COMPLETED, tokens=100, cost_eur=0.01)
 
