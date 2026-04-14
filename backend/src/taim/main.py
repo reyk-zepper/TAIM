@@ -152,6 +152,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.team_composer = team_composer
     app.state.orchestrator = orchestrator
 
+    # Volatile per-session state for plan confirmation (not persisted)
+    app.state.pending_plans: dict = {}
+
     logger.info("orchestrator.ready")
 
     # 9. Intent Interpreter — now with real memory
