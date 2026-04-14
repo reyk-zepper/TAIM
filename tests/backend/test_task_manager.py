@@ -8,7 +8,7 @@ import pytest
 import pytest_asyncio
 
 from taim.brain.database import init_database
-from taim.models.orchestration import TaskPlan, TaskStatus
+from taim.models.orchestration import TaskPlan, TaskStatus, TeamAgentSlot
 from taim.orchestrator.task_manager import TaskManager
 
 
@@ -23,7 +23,7 @@ async def mgr(tmp_path: Path):
 @pytest.mark.asyncio
 class TestCreate:
     async def test_inserts_row_with_pending(self, mgr: TaskManager) -> None:
-        plan = TaskPlan(task_id="t1", objective="test", agent_name="researcher")
+        plan = TaskPlan(task_id="t1", objective="test", agents=[TeamAgentSlot(role="primary", agent_name="researcher")])
         await mgr.create(plan)
         async with mgr._db.execute("SELECT status, objective FROM task_state WHERE task_id = ?", ("t1",)) as cur:
             row = await cur.fetchone()
@@ -33,7 +33,7 @@ class TestCreate:
 @pytest.mark.asyncio
 class TestSetStatus:
     async def test_updates_status(self, mgr: TaskManager) -> None:
-        plan = TaskPlan(task_id="t1", objective="test", agent_name="researcher")
+        plan = TaskPlan(task_id="t1", objective="test", agents=[TeamAgentSlot(role="primary", agent_name="researcher")])
         await mgr.create(plan)
         await mgr.set_status("t1", TaskStatus.RUNNING)
         async with mgr._db.execute("SELECT status FROM task_state WHERE task_id = ?", ("t1",)) as cur:
@@ -41,7 +41,7 @@ class TestSetStatus:
         assert row[0] == "running"
 
     async def test_completed_at_set_for_terminal(self, mgr: TaskManager) -> None:
-        plan = TaskPlan(task_id="t1", objective="test", agent_name="researcher")
+        plan = TaskPlan(task_id="t1", objective="test", agents=[TeamAgentSlot(role="primary", agent_name="researcher")])
         await mgr.create(plan)
         await mgr.set_status("t1", TaskStatus.COMPLETED, tokens=100, cost_eur=0.05)
         async with mgr._db.execute(
@@ -55,7 +55,7 @@ class TestSetStatus:
         assert row[3] is not None
 
     async def test_running_no_completed_at(self, mgr: TaskManager) -> None:
-        plan = TaskPlan(task_id="t1", objective="test", agent_name="researcher")
+        plan = TaskPlan(task_id="t1", objective="test", agents=[TeamAgentSlot(role="primary", agent_name="researcher")])
         await mgr.create(plan)
         await mgr.set_status("t1", TaskStatus.RUNNING)
         async with mgr._db.execute(
@@ -69,7 +69,7 @@ class TestSetStatus:
 @pytest.mark.asyncio
 class TestUpdateAgentStates:
     async def test_writes_json(self, mgr: TaskManager) -> None:
-        plan = TaskPlan(task_id="t1", objective="test", agent_name="a")
+        plan = TaskPlan(task_id="t1", objective="test", agents=[TeamAgentSlot(role="primary", agent_name="a")])
         await mgr.create(plan)
         await mgr.update_agent_states("t1", {"a": "running", "b": "done"})
         import json
@@ -87,7 +87,7 @@ class TestListRecent:
     async def test_returns_tasks_newest_first(self, mgr: TaskManager) -> None:
         import asyncio
         for i in range(3):
-            plan = TaskPlan(task_id=f"t{i}", objective=f"obj{i}", agent_name="a")
+            plan = TaskPlan(task_id=f"t{i}", objective=f"obj{i}", agents=[TeamAgentSlot(role="primary", agent_name="a")])
             await mgr.create(plan)
             await asyncio.sleep(0.01)  # ensure different created_at
         tasks = await mgr.list_recent(limit=10)
@@ -98,7 +98,7 @@ class TestListRecent:
 
     async def test_limit_respected(self, mgr: TaskManager) -> None:
         for i in range(5):
-            plan = TaskPlan(task_id=f"t{i}", objective=f"obj{i}", agent_name="a")
+            plan = TaskPlan(task_id=f"t{i}", objective=f"obj{i}", agents=[TeamAgentSlot(role="primary", agent_name="a")])
             await mgr.create(plan)
         tasks = await mgr.list_recent(limit=2)
         assert len(tasks) == 2

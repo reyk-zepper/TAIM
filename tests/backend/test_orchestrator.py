@@ -14,7 +14,7 @@ from taim.brain.prompts import PromptLoader
 from taim.brain.skill_registry import SkillRegistry
 from taim.brain.vault import VaultOps
 from taim.models.chat import IntentResult, TaskConstraints
-from taim.models.orchestration import TaskStatus
+from taim.models.orchestration import TaskPlan, TaskStatus, TeamAgentSlot
 from taim.orchestrator.orchestrator import Orchestrator
 from taim.orchestrator.task_manager import TaskManager
 from taim.orchestrator.team_composer import TeamComposer
@@ -186,3 +186,111 @@ class TestTaskDescription:
         planning_messages = router.calls[0]["messages"]
         planning_prompt = planning_messages[0]["content"]
         assert "SaaS competitors" in planning_prompt
+
+
+@pytest.mark.asyncio
+class TestExecuteTeam:
+    async def test_sequential_two_agents(self, setup) -> None:
+        _, loader, _, run_store, task_mgr, agent_reg, composer, skill_reg = setup
+        # Each agent needs: planning, executing, reviewing = 3 LLM calls
+        # Two agents = 6 calls total
+        router = MockRouter([
+            # Agent 1 (researcher)
+            make_response("plan for research"),
+            make_response("research result"),
+            make_response('{"quality_ok": true, "feedback": "ok"}'),
+            # Agent 2 (analyst)
+            make_response("plan for analysis"),
+            make_response("analysis of research result"),
+            make_response('{"quality_ok": true, "feedback": "ok"}'),
+        ])
+        orch = _build_orchestrator(router, composer, task_mgr, agent_reg, run_store, loader, skill_reg)
+
+        plan = TaskPlan(
+            task_id="team-1",
+            objective="research and analyze",
+            agents=[
+                TeamAgentSlot(role="researcher", agent_name="researcher"),
+                TeamAgentSlot(role="analyst", agent_name="analyst"),
+            ],
+        )
+        intent = _intent(task_type="research", objective="research and analyze")
+
+        result = await orch.execute_team(plan, intent, session_id="s1")
+        assert result.status == TaskStatus.COMPLETED
+        assert "analysis" in result.result_content.lower()  # Final agent's output
+        assert result.cost_eur >= 0
+
+    async def test_inter_agent_result_passing(self, setup) -> None:
+        """Second agent's prompt should contain first agent's output."""
+        _, loader, _, run_store, task_mgr, agent_reg, composer, skill_reg = setup
+        router = MockRouter([
+            make_response("plan"),
+            make_response("FIRST_AGENT_UNIQUE_OUTPUT"),
+            make_response('{"quality_ok": true, "feedback": "ok"}'),
+            make_response("plan2"),
+            make_response("second agent result"),
+            make_response('{"quality_ok": true, "feedback": "ok"}'),
+        ])
+        orch = _build_orchestrator(router, composer, task_mgr, agent_reg, run_store, loader, skill_reg)
+
+        plan = TaskPlan(
+            task_id="pass-1",
+            objective="test passing",
+            agents=[
+                TeamAgentSlot(role="a", agent_name="researcher"),
+                TeamAgentSlot(role="b", agent_name="analyst"),
+            ],
+        )
+        intent = _intent()
+        await orch.execute_team(plan, intent, session_id="s1")
+
+        # Second agent's planning call (index 3) should include first agent's output
+        second_agent_planning = router.calls[3]["messages"][0]["content"]
+        assert "FIRST_AGENT_UNIQUE_OUTPUT" in second_agent_planning
+
+    async def test_agent_failure_stops_team(self, setup) -> None:
+        from taim.errors import AllProvidersFailed
+        _, loader, _, run_store, task_mgr, agent_reg, composer, skill_reg = setup
+        router = MockRouter([
+            # First agent fails during planning
+            AllProvidersFailed(user_message="fail", detail="d"),
+        ])
+        orch = _build_orchestrator(router, composer, task_mgr, agent_reg, run_store, loader, skill_reg)
+
+        plan = TaskPlan(
+            task_id="fail-1",
+            objective="test",
+            agents=[
+                TeamAgentSlot(role="a", agent_name="researcher"),
+                TeamAgentSlot(role="b", agent_name="analyst"),
+            ],
+        )
+        intent = _intent()
+        result = await orch.execute_team(plan, intent, session_id="s1")
+        assert result.status == TaskStatus.FAILED
+
+    async def test_task_status_in_db(self, setup) -> None:
+        _, loader, _, run_store, task_mgr, agent_reg, composer, skill_reg = setup
+        router = MockRouter([
+            make_response("plan"), make_response("r1"), make_response('{"quality_ok": true, "feedback": ""}'),
+            make_response("plan"), make_response("r2"), make_response('{"quality_ok": true, "feedback": ""}'),
+        ])
+        orch = _build_orchestrator(router, composer, task_mgr, agent_reg, run_store, loader, skill_reg)
+
+        plan = TaskPlan(
+            task_id="db-1",
+            objective="test db",
+            agents=[
+                TeamAgentSlot(role="a", agent_name="researcher"),
+                TeamAgentSlot(role="b", agent_name="analyst"),
+            ],
+        )
+        # Need to create task first
+        await task_mgr.create(plan)
+        intent = _intent()
+        result = await orch.execute_team(plan, intent, session_id="s1")
+        assert result.status == TaskStatus.COMPLETED
+
+        tasks = await task_mgr.list_recent()
+        assert any(t["task_id"] == "db-1" and t["status"] == "completed" for t in tasks)

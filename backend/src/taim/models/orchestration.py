@@ -16,13 +16,34 @@ class TaskStatus(StrEnum):
     FAILED = "failed"
 
 
+class OrchestrationPattern(StrEnum):
+    SEQUENTIAL = "sequential"
+
+
+class TeamAgentSlot(BaseModel):
+    """One agent assigned to a role in a team."""
+
+    role: str
+    agent_name: str
+
+
 class TaskPlan(BaseModel):
-    """What the Orchestrator decides to execute. Step 7a: single-agent only."""
+    """What the Orchestrator decides to execute. Step 7b: multi-agent support."""
 
     task_id: str
     objective: str
     parameters: dict[str, Any] = {}
-    agent_name: str
+    agents: list[TeamAgentSlot]
+    pattern: OrchestrationPattern = OrchestrationPattern.SEQUENTIAL
+    estimated_cost_eur: float = 0.0
+
+    @property
+    def is_single_agent(self) -> bool:
+        return len(self.agents) <= 1
+
+    @property
+    def primary_agent_name(self) -> str:
+        return self.agents[0].agent_name if self.agents else ""
 
 
 class TaskExecutionResult(BaseModel):

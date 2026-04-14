@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from uuid import uuid4
 
 import structlog
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -14,7 +15,7 @@ from taim.brain.summarizer import Summarizer
 from taim.conversation import IntentInterpreter
 from taim.models.chat import IntentCategory, IntentResult
 from taim.models.memory import ChatMessage
-from taim.models.orchestration import TaskStatus
+from taim.models.orchestration import TaskPlan, TaskStatus
 from taim.models.tool import ToolExecutionEvent
 
 logger = structlog.get_logger()
@@ -45,6 +46,21 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str) -> None:
                 continue
 
             hot.append_message(session_id, "user", user_message)
+
+            # Check for pending plan confirmation BEFORE interpreter call
+            pending_plans = getattr(websocket.app.state, "pending_plans", {})
+            if session_id in pending_plans:
+                await _handle_plan_confirmation(
+                    websocket=websocket,
+                    hot=hot,
+                    store=store,
+                    session_id=session_id,
+                    user_message=user_message,
+                    pending_plans=pending_plans,
+                    interpreter=interpreter,
+                )
+                continue
+
             await websocket.send_json({"type": "thinking", "session_id": session_id})
 
             session = hot.get_or_create(session_id)
@@ -70,22 +86,77 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str) -> None:
             # Branch: run orchestrator for actionable new_task intents
             orchestrator = getattr(websocket.app.state, "orchestrator", None)
             memory_manager = getattr(websocket.app.state, "memory", None)
+            composer = getattr(websocket.app.state, "team_composer", None)
+            pending_plans = getattr(websocket.app.state, "pending_plans", {})
+
             if (
                 orchestrator is not None
+                and composer is not None
                 and result.intent is not None
                 and result.classification.category == IntentCategory.NEW_TASK
                 and not result.needs_followup
             ):
-                await _run_orchestrated_task(
-                    websocket=websocket,
-                    orchestrator=orchestrator,
-                    memory_manager=memory_manager,
-                    hot=hot,
-                    store=store,
-                    session_id=session_id,
-                    intent=result.intent,
-                    classification=result.classification,
+                # Compose team
+                slots = composer.compose_team(result.intent)
+
+                if not slots:
+                    hot.append_message(
+                        session_id,
+                        "assistant",
+                        "I couldn't find any suitable agents for this task.",
+                    )
+                    await store.persist(hot.get_or_create(session_id))
+                    await websocket.send_json(
+                        {
+                            "type": "error",
+                            "content": "No suitable agents available.",
+                            "session_id": session_id,
+                        }
+                    )
+                    continue
+
+                task_id = str(uuid4())
+                plan = TaskPlan(
+                    task_id=task_id,
+                    objective=result.intent.objective,
+                    parameters=result.intent.parameters,
+                    agents=slots,
                 )
+
+                if plan.is_single_agent:
+                    # Single agent: execute directly (no confirmation needed)
+                    await _run_orchestrated_task(
+                        websocket=websocket,
+                        orchestrator=orchestrator,
+                        memory_manager=memory_manager,
+                        hot=hot,
+                        store=store,
+                        session_id=session_id,
+                        intent=result.intent,
+                        classification=result.classification,
+                    )
+                    continue
+
+                # Multi-agent: propose plan and wait for confirmation
+                agent_names = ", ".join(s.agent_name for s in slots)
+                await websocket.send_json(
+                    {
+                        "type": "plan_proposed",
+                        "content": (
+                            f"I've assembled a team for this: {agent_names}. "
+                            "They'll work sequentially. Confirm to start, or suggest changes."
+                        ),
+                        "session_id": session_id,
+                        "plan": plan.model_dump(),
+                    }
+                )
+                pending_plans[session_id] = (plan, result.intent, 0)  # (plan, intent, round)
+                hot.append_message(
+                    session_id,
+                    "assistant",
+                    f"Team proposed: {agent_names}. Waiting for confirmation.",
+                )
+                await store.persist(hot.get_or_create(session_id))
                 continue
 
             response_text = (
@@ -222,3 +293,186 @@ async def _run_orchestrated_task(
             "session_id": session_id,
         }
     )
+
+
+async def _handle_plan_confirmation(
+    websocket: WebSocket,
+    hot: HotMemory,
+    store: SessionStore,
+    session_id: str,
+    user_message: str,
+    pending_plans: dict,
+    interpreter: IntentInterpreter,
+) -> None:
+    """Handle user response to a pending plan_proposed event."""
+    plan, intent, rounds = pending_plans[session_id]
+
+    # Classify the user's response
+    try:
+        classification_result = await interpreter.interpret(
+            message=user_message,
+            session_id=session_id,
+            recent_context=[],
+        )
+        category = classification_result.classification.category
+    except Exception:
+        category = IntentCategory.CONFIRMATION  # On error, treat as confirmation
+
+    if category == IntentCategory.CONFIRMATION:
+        # Execute the plan
+        del pending_plans[session_id]
+        orchestrator = websocket.app.state.orchestrator
+        memory_manager = getattr(websocket.app.state, "memory", None)
+
+        await websocket.send_json(
+            {
+                "type": "agent_started",
+                "content": f"Starting team: {', '.join(s.agent_name for s in plan.agents)}",
+                "session_id": session_id,
+            }
+        )
+
+        user_prefs = ""
+        if memory_manager:
+            try:
+                user_prefs = await memory_manager.get_preferences_text()
+            except Exception:
+                pass
+
+        async def fwd_agent(event: TransitionEvent) -> None:
+            await websocket.send_json(
+                {
+                    "type": "agent_state",
+                    "agent_name": event.agent_name,
+                    "to_state": event.to_state.value,
+                    "iteration": event.iteration,
+                    "reason": event.reason,
+                    "session_id": session_id,
+                }
+            )
+
+        async def fwd_tool(event: ToolExecutionEvent) -> None:
+            await websocket.send_json(
+                {
+                    "type": "tool_execution",
+                    "content": event.summary,
+                    "agent_name": event.agent_name,
+                    "tool_name": event.tool_name,
+                    "tool_status": event.status,
+                    "session_id": session_id,
+                }
+            )
+
+        # Create task_state row first
+        await orchestrator._task_manager.create(plan)
+
+        try:
+            result = await orchestrator.execute_team(
+                plan=plan,
+                intent=intent,
+                session_id=session_id,
+                user_preferences=user_prefs,
+                on_agent_event=fwd_agent,
+                on_tool_event=fwd_tool,
+            )
+        except Exception:
+            logger.exception("chat.team_execution_error", session=session_id)
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "content": "Something went wrong running the team.",
+                    "session_id": session_id,
+                }
+            )
+            return
+
+        final_text = result.result_content or result.error or "Done."
+        hot.append_message(session_id, "assistant", final_text)
+        await store.persist(hot.get_or_create(session_id))
+
+        await websocket.send_json(
+            {
+                "type": "agent_completed" if result.status == TaskStatus.COMPLETED else "error",
+                "content": final_text,
+                "agent_name": result.agent_name,
+                "cost_eur": result.cost_eur,
+                "duration_ms": result.duration_ms,
+                "session_id": session_id,
+            }
+        )
+
+    elif category == IntentCategory.STOP_COMMAND:
+        # Cancel plan
+        del pending_plans[session_id]
+        hot.append_message(session_id, "assistant", "Plan cancelled.")
+        await store.persist(hot.get_or_create(session_id))
+        await websocket.send_json(
+            {
+                "type": "system",
+                "content": "Plan cancelled.",
+                "session_id": session_id,
+            }
+        )
+
+    elif rounds < 2:
+        # Modification round — re-compose
+        # Pass user's modification as additional context
+        # For 7b: simplified — just re-compose with same intent
+        # The user's feedback is noted but rule-based composer may produce same result
+        pending_plans[session_id] = (plan, intent, rounds + 1)
+        hot.append_message(
+            session_id,
+            "assistant",
+            "I'll adjust the plan. For now, the same team applies. Confirm to proceed.",
+        )
+        await store.persist(hot.get_or_create(session_id))
+        team_names = ", ".join(s.agent_name for s in plan.agents)
+        await websocket.send_json(
+            {
+                "type": "plan_proposed",
+                "content": (
+                    f"Adjusted plan (round {rounds + 2}/3): {team_names}. Confirm to start."
+                ),
+                "session_id": session_id,
+                "plan": plan.model_dump(),
+            }
+        )
+
+    else:
+        # Max rounds reached — execute anyway (US-4.3 AC4)
+        del pending_plans[session_id]
+        hot.append_message(
+            session_id,
+            "assistant",
+            "Maximum plan revisions reached. Executing current plan.",
+        )
+        await store.persist(hot.get_or_create(session_id))
+
+        orchestrator = websocket.app.state.orchestrator
+        await orchestrator._task_manager.create(plan)
+        try:
+            result = await orchestrator.execute_team(
+                plan=plan,
+                intent=intent,
+                session_id=session_id,
+            )
+        except Exception:
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "content": "Execution failed.",
+                    "session_id": session_id,
+                }
+            )
+            return
+
+        final_text = result.result_content or result.error or "Done."
+        hot.append_message(session_id, "assistant", final_text)
+        await store.persist(hot.get_or_create(session_id))
+        await websocket.send_json(
+            {
+                "type": "agent_completed" if result.status == TaskStatus.COMPLETED else "error",
+                "content": final_text,
+                "session_id": session_id,
+            }
+        )

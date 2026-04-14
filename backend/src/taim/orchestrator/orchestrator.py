@@ -16,7 +16,7 @@ from taim.brain.prompts import PromptLoader
 from taim.brain.skill_registry import SkillRegistry
 from taim.models.agent import AgentStateEnum
 from taim.models.chat import IntentResult
-from taim.models.orchestration import TaskExecutionResult, TaskPlan, TaskStatus
+from taim.models.orchestration import TaskExecutionResult, TaskPlan, TaskStatus, TeamAgentSlot
 from taim.models.tool import ToolExecutionEvent
 from taim.orchestrator.task_manager import TaskManager
 from taim.orchestrator.team_composer import TeamComposer
@@ -81,7 +81,7 @@ class Orchestrator:
             task_id=task_id,
             objective=intent.objective,
             parameters=intent.parameters,
-            agent_name=agent.name,
+            agents=[TeamAgentSlot(role="primary", agent_name=agent.name)],
         )
 
         # 3. Create task_state row
@@ -139,6 +139,108 @@ class Orchestrator:
             result_content=run.result_content,
             tokens_used=tokens,
             cost_eur=run.cost_eur,
+            duration_ms=(time.monotonic() - start) * 1000,
+        )
+
+    async def execute_team(
+        self,
+        plan: TaskPlan,
+        intent: IntentResult,
+        session_id: str,
+        user_preferences: str = "",
+        on_agent_event: AgentEventCallback | None = None,
+        on_tool_event: ToolEventCallback | None = None,
+    ) -> TaskExecutionResult:
+        """Run agents sequentially, passing results between them."""
+        start = time.monotonic()
+        await self._task_manager.set_status(plan.task_id, TaskStatus.RUNNING)
+
+        base_task_description = self._build_task_description(intent)
+        previous_result = ""
+        previous_agent = ""
+        final_result = ""
+        total_cost = 0.0
+        final_agent = ""
+
+        for slot in plan.agents:
+            agent = self._agent_registry.get_agent(slot.agent_name)
+            if not agent:
+                logger.warning(
+                    "orchestrator.agent_not_found",
+                    agent=slot.agent_name,
+                    task_id=plan.task_id,
+                )
+                continue
+
+            # Build context with previous agent's output
+            task_description = base_task_description
+            if previous_result:
+                truncated = previous_result[:4000]  # ~1000 tokens cap (US-5.3 AC3)
+                task_description += f"\n\nPrevious agent ({previous_agent}) output:\n{truncated}"
+
+            try:
+                sm = AgentStateMachine(
+                    agent=agent,
+                    router=self._router,
+                    prompt_loader=self._prompt_loader,
+                    run_store=self._agent_run_store,
+                    task_id=plan.task_id,
+                    task_description=task_description,
+                    session_id=session_id,
+                    user_preferences=user_preferences,
+                    on_transition=on_agent_event,
+                    tool_executor=self._tool_executor,
+                    tool_context=self._tool_context,
+                    on_tool_event=on_tool_event,
+                    skill_registry=self._skill_registry,
+                )
+                run = await sm.run()
+            except Exception as e:  # noqa: BLE001
+                logger.exception(
+                    "orchestrator.agent_failed",
+                    agent=slot.agent_name,
+                    task_id=plan.task_id,
+                )
+                await self._task_manager.set_status(plan.task_id, TaskStatus.FAILED)
+                return TaskExecutionResult(
+                    task_id=plan.task_id,
+                    status=TaskStatus.FAILED,
+                    agent_name=slot.agent_name,
+                    error=str(e),
+                    duration_ms=(time.monotonic() - start) * 1000,
+                )
+
+            previous_result = run.result_content
+            previous_agent = slot.agent_name
+            total_cost += run.cost_eur
+            final_result = run.result_content
+            final_agent = slot.agent_name
+
+            # If agent failed, stop the team
+            if run.final_state != AgentStateEnum.DONE:
+                await self._task_manager.set_status(plan.task_id, TaskStatus.FAILED)
+                return TaskExecutionResult(
+                    task_id=plan.task_id,
+                    status=TaskStatus.FAILED,
+                    agent_name=slot.agent_name,
+                    result_content=run.result_content,
+                    cost_eur=total_cost,
+                    error=f"Agent {slot.agent_name} failed",
+                    duration_ms=(time.monotonic() - start) * 1000,
+                )
+
+        await self._task_manager.set_status(
+            plan.task_id,
+            TaskStatus.COMPLETED,
+            cost_eur=total_cost,
+        )
+
+        return TaskExecutionResult(
+            task_id=plan.task_id,
+            status=TaskStatus.COMPLETED,
+            agent_name=final_agent,
+            result_content=final_result,
+            cost_eur=total_cost,
             duration_ms=(time.monotonic() - start) * 1000,
         )
 

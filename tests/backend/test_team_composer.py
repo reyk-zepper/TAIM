@@ -28,6 +28,49 @@ def _intent(task_type: str = "", objective: str = "", suggested: list[str] | Non
     )
 
 
+class TestComposeTeam:
+    def test_research_returns_two_agents(self, registry) -> None:
+        composer = TeamComposer(registry)
+        slots = composer.compose_team(_intent(task_type="research"))
+        names = [s.agent_name for s in slots]
+        assert "researcher" in names
+        assert "analyst" in names
+
+    def test_code_returns_coder_and_reviewer(self, registry) -> None:
+        composer = TeamComposer(registry)
+        slots = composer.compose_team(_intent(task_type="code_generation"))
+        names = [s.agent_name for s in slots]
+        assert "coder" in names
+        assert "reviewer" in names
+
+    def test_writing_returns_researcher_and_writer(self, registry) -> None:
+        composer = TeamComposer(registry)
+        slots = composer.compose_team(_intent(task_type="writing"))
+        names = [s.agent_name for s in slots]
+        assert "researcher" in names
+        assert "writer" in names
+
+    def test_unknown_falls_back_to_single(self, registry) -> None:
+        composer = TeamComposer(registry)
+        slots = composer.compose_team(_intent(task_type="xyz"))
+        assert len(slots) >= 1
+
+    def test_suggested_team_wins(self, registry) -> None:
+        composer = TeamComposer(registry)
+        slots = composer.compose_team(_intent(suggested=["writer", "analyst"]))
+        names = [s.agent_name for s in slots]
+        assert names == ["writer", "analyst"]
+
+    def test_empty_registry_returns_empty(self, tmp_path: Path) -> None:
+        empty_dir = tmp_path / "empty"
+        empty_dir.mkdir()
+        registry = AgentRegistry(empty_dir)
+        registry.load()
+        composer = TeamComposer(registry)
+        slots = composer.compose_team(_intent(task_type="research"))
+        assert slots == []
+
+
 class TestComposeSingleAgent:
     def test_suggested_team_wins(self, registry) -> None:
         composer = TeamComposer(registry)
