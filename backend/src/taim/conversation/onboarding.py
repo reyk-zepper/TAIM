@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
-from enum import Enum
+from enum import StrEnum
 
 import structlog
 
@@ -13,7 +13,7 @@ from taim.models.memory import MemoryEntry
 logger = structlog.get_logger()
 
 
-class OnboardingStep(str, Enum):
+class OnboardingStep(StrEnum):
     WELCOME = "welcome"
     API_KEY = "api_key"
     RULES = "rules"
