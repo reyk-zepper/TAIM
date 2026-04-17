@@ -13,6 +13,7 @@ from taim.brain.hot_memory import HotMemory
 from taim.brain.session_store import SessionStore
 from taim.brain.summarizer import Summarizer
 from taim.conversation import IntentInterpreter
+from taim.conversation.onboarding import OnboardingState
 from taim.models.chat import IntentCategory, IntentResult
 from taim.models.memory import ChatMessage
 from taim.models.orchestration import TaskPlan, TaskStatus
@@ -38,6 +39,22 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str) -> None:
     else:
         hot.get_or_create(session_id)
 
+    # Onboarding check on first connect
+    onboarding_flow = getattr(websocket.app.state, "onboarding_flow", None)
+    onboarding_sessions = getattr(websocket.app.state, "onboarding_sessions", {})
+    if onboarding_flow and await onboarding_flow.is_needed():
+        state = OnboardingState()
+        onboarding_sessions[session_id] = state
+        welcome = onboarding_flow.get_welcome_message()
+        await websocket.send_json(
+            {
+                "type": "onboarding",
+                "content": welcome,
+                "step": "welcome",
+                "session_id": session_id,
+            }
+        )
+
     try:
         while True:
             data = await websocket.receive_json()
@@ -46,6 +63,24 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str) -> None:
                 continue
 
             hot.append_message(session_id, "user", user_message)
+
+            # Handle onboarding responses
+            if session_id in onboarding_sessions:
+                ob_state = onboarding_sessions[session_id]
+                response = await onboarding_flow.handle_response(ob_state, user_message)
+                hot.append_message(session_id, "assistant", response)
+                await store.persist(hot.get_or_create(session_id))
+                await websocket.send_json(
+                    {
+                        "type": "onboarding",
+                        "content": response,
+                        "step": ob_state.step.value,
+                        "session_id": session_id,
+                    }
+                )
+                if ob_state.is_complete:
+                    del onboarding_sessions[session_id]
+                continue
 
             # Check for pending plan confirmation BEFORE interpreter call
             pending_plans = getattr(websocket.app.state, "pending_plans", {})

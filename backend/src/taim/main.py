@@ -174,6 +174,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.heartbeat = heartbeat
     logger.info("heartbeat.configured", interval=product_config.heartbeat_interval)
 
+    # 15. Onboarding + Smart Defaults
+    from taim.conversation.defaults import SmartDefaults
+    from taim.conversation.onboarding import OnboardingFlow
+
+    onboarding_flow = OnboardingFlow(memory=memory_manager)
+    smart_defaults = SmartDefaults(product_config.defaults)
+
+    app.state.onboarding_flow = onboarding_flow
+    app.state.smart_defaults = smart_defaults
+    app.state.onboarding_sessions = {}
+
+    logger.info("onboarding.ready")
+
     # 9. Intent Interpreter — now with real memory
     from taim.conversation import IntentInterpreter
 
@@ -267,6 +280,10 @@ def create_app() -> FastAPI:
     from taim.api.stats import router as stats_router
 
     app.include_router(stats_router)
+
+    from taim.api.setup import router as setup_router
+
+    app.include_router(setup_router)
 
     return app
 
