@@ -32,14 +32,16 @@ async def monthly_stats(db: aiosqlite.Connection = Depends(get_db)) -> dict:
     total_calls = 0
     for row in rows:
         provider_name, calls, prompt, completion, cost = row
-        providers.append({
-            "provider": provider_name,
-            "calls": calls,
-            "prompt_tokens": prompt,
-            "completion_tokens": completion,
-            "total_tokens": prompt + completion,
-            "cost_usd": round(cost, 4),
-        })
+        providers.append(
+            {
+                "provider": provider_name,
+                "calls": calls,
+                "prompt_tokens": prompt,
+                "completion_tokens": completion,
+                "total_tokens": prompt + completion,
+                "cost_usd": round(cost, 4),
+            }
+        )
         total_cost += cost
         total_tokens += prompt + completion
         total_calls += calls

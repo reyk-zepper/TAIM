@@ -71,10 +71,7 @@ class LLMRouter:
             provider_attempts.setdefault(provider_name, 0)
 
             # Pre-call budget check (US-6.4)
-            if (
-                provider_config.monthly_budget_eur is not None
-                and self._tracker
-            ):
+            if provider_config.monthly_budget_eur is not None and self._tracker:
                 try:
                     monthly_cost = await self._tracker.get_monthly_cost(provider_name)
                     # Approximate: compare USD cost against EUR budget / 0.92
