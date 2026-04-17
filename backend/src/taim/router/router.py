@@ -70,6 +70,27 @@ class LLMRouter:
 
             provider_attempts.setdefault(provider_name, 0)
 
+            # Pre-call budget check (US-6.4)
+            if (
+                provider_config.monthly_budget_eur is not None
+                and self._tracker
+            ):
+                try:
+                    monthly_cost = await self._tracker.get_monthly_cost(provider_name)
+                    # Approximate: compare USD cost against EUR budget / 0.92
+                    budget_usd = provider_config.monthly_budget_eur / 0.92
+                    if monthly_cost >= budget_usd:
+                        logger.info(
+                            "router.budget_exceeded",
+                            provider=provider_name,
+                            monthly_cost=monthly_cost,
+                            budget_usd=budget_usd,
+                        )
+                        candidate_idx += 1
+                        continue
+                except Exception:
+                    logger.exception("router.budget_check_error")
+
             api_key = (
                 os.environ.get(provider_config.api_key_env) if provider_config.api_key_env else None
             )
