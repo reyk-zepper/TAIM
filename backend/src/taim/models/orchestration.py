@@ -18,6 +18,9 @@ class TaskStatus(StrEnum):
 
 class OrchestrationPattern(StrEnum):
     SEQUENTIAL = "sequential"
+    PARALLEL = "parallel"  # Phase 2 implementation
+    PIPELINE = "pipeline"  # Phase 2 implementation
+    HIERARCHICAL = "hierarchical"  # Phase 2 implementation
 
 
 class TeamAgentSlot(BaseModel):

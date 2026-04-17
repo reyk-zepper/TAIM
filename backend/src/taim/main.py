@@ -136,6 +136,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     task_manager = TaskManager(db)
     team_composer = TeamComposer(registry)
 
+    # 13a. Context Assembler
+    from taim.brain.context_assembler import ContextAssembler
+
+    context_assembler = ContextAssembler(memory=memory_manager)
+
     orchestrator = Orchestrator(
         composer=team_composer,
         task_manager=task_manager,
@@ -146,6 +151,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         tool_executor=tool_executor,
         tool_context=app.state.tool_context,
         skill_registry=skill_registry,
+        context_assembler=context_assembler,
     )
 
     app.state.task_manager = task_manager

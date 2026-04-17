@@ -12,6 +12,7 @@ import structlog
 from taim.brain.agent_registry import AgentRegistry
 from taim.brain.agent_run_store import AgentRunStore
 from taim.brain.agent_state_machine import AgentStateMachine, TransitionEvent
+from taim.brain.context_assembler import ContextAssembler
 from taim.brain.prompts import PromptLoader
 from taim.brain.skill_registry import SkillRegistry
 from taim.models.agent import AgentStateEnum
@@ -43,6 +44,7 @@ class Orchestrator:
         tool_executor: ToolExecutor | None = None,
         tool_context: dict[str, Any] | None = None,
         skill_registry: SkillRegistry | None = None,
+        context_assembler: ContextAssembler | None = None,
     ) -> None:
         self._composer = composer
         self._task_manager = task_manager
@@ -53,6 +55,7 @@ class Orchestrator:
         self._tool_executor = tool_executor
         self._tool_context = tool_context or {}
         self._skill_registry = skill_registry
+        self._context_assembler = context_assembler or ContextAssembler()
 
     async def execute(
         self,
@@ -93,6 +96,18 @@ class Orchestrator:
 
         # 5. Run the agent via state machine
         try:
+            # Assemble context (token-budgeted)
+            assembled_context = ""
+            if self._context_assembler:
+                try:
+                    assembled_context = await self._context_assembler.assemble(
+                        agent=agent,
+                        task_description=task_description,
+                        constraints=intent.constraints if hasattr(intent, "constraints") else None,
+                    )
+                except Exception:
+                    logger.exception("orchestrator.context_assembly_failed", task_id=task_id)
+
             sm = AgentStateMachine(
                 agent=agent,
                 router=self._router,
@@ -101,7 +116,7 @@ class Orchestrator:
                 task_id=task_id,
                 task_description=task_description,
                 session_id=session_id,
-                user_preferences=user_preferences,
+                user_preferences=assembled_context or user_preferences,
                 on_transition=on_agent_event,
                 tool_executor=self._tool_executor,
                 tool_context=self._tool_context,
@@ -158,6 +173,7 @@ class Orchestrator:
         base_task_description = self._build_task_description(intent)
         previous_result = ""
         previous_agent = ""
+        previous_results: list[tuple[str, str]] = []
         final_result = ""
         total_cost = 0.0
         final_agent = ""
@@ -172,9 +188,23 @@ class Orchestrator:
                 )
                 continue
 
-            # Build context with previous agent's output
+            # Assemble context with previous results
+            assembled_context = ""
+            if self._context_assembler:
+                try:
+                    assembled_context = await self._context_assembler.assemble(
+                        agent=agent,
+                        task_description=base_task_description,
+                        constraints=intent.constraints if hasattr(intent, "constraints") else None,
+                        previous_results=previous_results if previous_results else None,
+                    )
+                except Exception:
+                    logger.exception("orchestrator.context_assembly_failed", task_id=plan.task_id)
+
+            # Build task description — use base + assembled context as user_preferences
             task_description = base_task_description
-            if previous_result:
+            # If no context assembler, fall back to the old manual result passing
+            if not assembled_context and previous_result:
                 truncated = previous_result[:4000]  # ~1000 tokens cap (US-5.3 AC3)
                 task_description += f"\n\nPrevious agent ({previous_agent}) output:\n{truncated}"
 
@@ -187,7 +217,7 @@ class Orchestrator:
                     task_id=plan.task_id,
                     task_description=task_description,
                     session_id=session_id,
-                    user_preferences=user_preferences,
+                    user_preferences=assembled_context or user_preferences,
                     on_transition=on_agent_event,
                     tool_executor=self._tool_executor,
                     tool_context=self._tool_context,
@@ -212,6 +242,7 @@ class Orchestrator:
 
             previous_result = run.result_content
             previous_agent = slot.agent_name
+            previous_results.append((slot.agent_name, run.result_content))
             total_cost += run.cost_eur
             final_result = run.result_content
             final_agent = slot.agent_name
