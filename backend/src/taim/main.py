@@ -163,6 +163,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     logger.info("orchestrator.ready")
 
+    # 14. Heartbeat Manager
+    from taim.orchestrator.heartbeat import HeartbeatManager
+
+    heartbeat = HeartbeatManager(
+        interval_seconds=product_config.heartbeat_interval,
+        agent_timeout_seconds=product_config.agent_timeout,
+    )
+    heartbeat.start()
+    app.state.heartbeat = heartbeat
+    logger.info("heartbeat.configured", interval=product_config.heartbeat_interval)
+
     # 9. Intent Interpreter — now with real memory
     from taim.conversation import IntentInterpreter
 
@@ -190,6 +201,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     yield
 
+    # Shutdown
+    heartbeat.stop()
     await db.close()
     logger.info("taim.stopped")
 
@@ -250,6 +263,10 @@ def create_app() -> FastAPI:
     from taim.api.tasks import router as tasks_router
 
     app.include_router(tasks_router)
+
+    from taim.api.stats import router as stats_router
+
+    app.include_router(stats_router)
 
     return app
 
