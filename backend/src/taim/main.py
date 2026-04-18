@@ -110,6 +110,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     tool_executor.register("vault_memory_read", vault_memory_read)
     tool_executor.register("vault_memory_write", vault_memory_write)
 
+    from taim.orchestrator.builtin_tools.web_tools import web_fetch, web_search
+
+    tool_executor.register("web_search", web_search)
+    tool_executor.register("web_fetch", web_fetch)
+
     app.state.tool_registry = tool_registry
     app.state.tool_executor = tool_executor
     app.state.tool_context = {
