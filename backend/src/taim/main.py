@@ -119,6 +119,24 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     logger.info("tools.loaded", count=len(tool_executor.list_tools()))
 
+    # 11b. MCP Integration
+    from taim.orchestrator.mcp_client import MCPManager
+
+    mcp_manager = MCPManager()
+    mcp_config_path = system_config.vault.config_dir / "mcp-servers.yaml"
+    try:
+        await mcp_manager.connect_servers(mcp_config_path)
+        # Register discovered MCP tools in ToolExecutor
+        for schema, wrapper in mcp_manager.get_discovered_tools():
+            tool_registry._schemas[schema.name] = schema
+            tool_executor.register(schema.name, wrapper)
+        if mcp_manager.tool_count > 0:
+            logger.info("mcp.tools_registered", count=mcp_manager.tool_count)
+    except Exception:
+        logger.exception("mcp.startup_error")
+
+    app.state.mcp_manager = mcp_manager
+
     # 12. Skill Registry
     from taim.brain.skill_registry import SkillRegistry
 
@@ -216,6 +234,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Shutdown
     heartbeat.stop()
+    await mcp_manager.disconnect_all()
     await db.close()
     logger.info("taim.stopped")
 

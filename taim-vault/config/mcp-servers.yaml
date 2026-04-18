@@ -1,0 +1,20 @@
+# tAIm — MCP Server Configuration
+# Connect external MCP servers to give agents additional tools.
+
+mcp_servers: []
+
+# Example configurations (uncomment to use):
+#
+# - name: filesystem
+#   command: "npx -y @modelcontextprotocol/server-filesystem /path/to/workspace"
+#   enabled: true
+#
+# - name: github
+#   command: "npx -y @modelcontextprotocol/server-github"
+#   env:
+#     GITHUB_PERSONAL_ACCESS_TOKEN: "${GITHUB_TOKEN}"
+#   enabled: true
+#
+# - name: custom-api
+#   url: "http://localhost:3001/mcp"
+#   enabled: true

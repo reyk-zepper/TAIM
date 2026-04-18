@@ -564,6 +564,25 @@ prompt_template: |
   - Caveats — what the data does NOT tell us
 """
 
+_DEFAULT_MCP_SERVERS_YAML = """\
+# tAIm — MCP Server Configuration
+# Connect external MCP servers to give agents additional tools.
+
+mcp_servers: []
+
+# Example configurations (uncomment to use):
+#
+# - name: filesystem
+#   command: "npx -y @modelcontextprotocol/server-filesystem /path/to/workspace"
+#   enabled: true
+#
+# - name: github
+#   command: "npx -y @modelcontextprotocol/server-github"
+#   env:
+#     GITHUB_PERSONAL_ACCESS_TOKEN: "${GITHUB_TOKEN}"
+#   enabled: true
+"""
+
 
 class VaultOps:
     """Filesystem operations for the tAIm Vault."""
@@ -665,6 +684,7 @@ class VaultOps:
             "taim.yaml": _DEFAULT_TAIM_YAML,
             "providers.yaml": _DEFAULT_PROVIDERS_YAML,
             "defaults.yaml": _DEFAULT_DEFAULTS_YAML,
+            "mcp-servers.yaml": _DEFAULT_MCP_SERVERS_YAML,
         }
         for filename, content in defaults.items():
             path = self.vault_config.config_dir / filename
