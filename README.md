@@ -1,8 +1,38 @@
-# TAIM — Team AI Manager
+# tAIm — Team AI Manager
 
 > **Your AI team. Your rules. Your control.**
 >
 > *1 employee = 10. An AI-powered orchestration system that works like an entire team — and gets better the more you use it.*
+
+## Quick Start
+
+```bash
+# Clone
+git clone https://github.com/reyk-zepper/TAIM.git && cd TAIM
+
+# Backend
+cd backend
+uv sync --all-extras
+uv run taim server start
+
+# Frontend (new terminal)
+cd frontend
+pnpm install
+pnpm dev
+```
+
+Open **http://localhost:5173** — tAIm greets you with guided onboarding.
+
+**Requirements:** Python 3.11+, Node.js 18+, uv, pnpm. At least one LLM API key (Anthropic/OpenAI) or Ollama running locally.
+
+### CLI
+
+```bash
+uv run taim version            # Show version
+uv run taim agent list         # List registered agents
+uv run taim stats              # Monthly usage stats
+uv run taim vault status       # Vault status
+```
 
 ---
 
@@ -22,27 +52,27 @@ AI agents are powerful. Claude Code, Codex, GPT — individual agents can do imp
 
 ## The Vision: AI Equalizer
 
-**TAIM closes the gap between AI experts and everyone else.**
+**tAIm closes the gap between AI experts and everyone else.**
 
-Today, productive use of AI is an expert topic. Those who know how to write prompts, configure agents, select models, and orchestrate workflows get excellent results. Those who don't have this knowledge fall behind. TAIM eliminates this gap.
+Today, productive use of AI is an expert topic. Those who know how to write prompts, configure agents, select models, and orchestrate workflows get excellent results. Those who don't have this knowledge fall behind. tAIm eliminates this gap.
 
 The goal is not for everyone to become an AI expert — the goal is for everyone to get expert-level results.
 
 **AI learns you. You don't learn AI.**
 
-TAIM gets better through use. The longer you work with it, the more it adapts to your individual needs. A persistent memory system stores insights, preferences, and optimized workflows. Not through model fine-tuning, but through intelligent accumulation of experience — optimized prompts and few-shot learning from its own memory.
+tAIm gets better through use. The longer you work with it, the more it adapts to your individual needs. A persistent memory system stores insights, preferences, and optimized workflows. Not through model fine-tuning, but through intelligent accumulation of experience — optimized prompts and few-shot learning from its own memory.
 
-A beginner who uses TAIM for two weeks gets results on the level of a power user — because TAIM has learned what they need and how they work.
+A beginner who uses tAIm for two weeks gets results on the level of a power user — because tAIm has learned what they need and how they work.
 
 ## How It Works
 
-You open TAIM. You see a chat. You describe what you need, in your own words. TAIM understands the intent, asks follow-up questions if needed, proposes a plan, and executes after your confirmation.
+You open tAIm. You see a chat. You describe what you need, in your own words. tAIm understands the intent, asks follow-up questions if needed, proposes a plan, and executes after your confirmation.
 
 ```
 You:   "I need a competitive analysis for our product.
         Look at 5 competitors and create a comparison report."
 
-TAIM:  "I'm assembling a research team:
+tAIm:  "I'm assembling a research team:
         - 1 Lead Researcher (coordinates the analysis)
         - 3 Web Researchers (research in parallel)
         - 1 Analyst (evaluates and creates the report)
@@ -53,31 +83,31 @@ TAIM:  "I'm assembling a research team:
 
 You:   "Yes, but maximum 3 hours and no more than $5."
 
-TAIM:  "Understood. Limits set. Team is starting now.
+tAIm:  "Understood. Limits set. Team is starting now.
         I'll get back to you when the report is ready
         or if I have a question."
 ```
 
 You never saw a YAML file. Never heard "Agent Registry." Never selected a model.
 
-## What Makes TAIM Different
+## What Makes tAIm Different
 
 ### vs. CrewAI, LangGraph, AutoGen
-Framework without UI. No dashboard. No memory. No compliance layer. Developer-only. TAIM is a **finished product** with a conversation-first interface that anyone can use.
+Framework without UI. No dashboard. No memory. No compliance layer. Developer-only. tAIm is a **finished product** with a conversation-first interface that anyone can use.
 
 ### vs. Dify.ai
-Good accessibility, but focused on single workflows. No autonomous multi-agent teamwork. No heartbeat control. No self-learning. TAIM orchestrates **teams**, not just workflows.
+Good accessibility, but focused on single workflows. No autonomous multi-agent teamwork. No heartbeat control. No self-learning. tAIm orchestrates **teams**, not just workflows.
 
 ### vs. Paperclip
-Ticket-based, company metaphor. No persistent learning. No multi-LLM failover. TAIM is an **assistant, not a company simulator**.
+Ticket-based, company metaphor. No persistent learning. No multi-LLM failover. tAIm is an **assistant, not a company simulator**.
 
 ### vs. OpenClaw
-Great personal AI assistant — but single agent. No team/swarm orchestration. No multi-user. TAIM **scales from one agent to coordinated teams**.
+Great personal AI assistant — but single agent. No team/swarm orchestration. No multi-user. tAIm **scales from one agent to coordinated teams**.
 
 ## Core Principles
 
 ### 1. Conversation First
-Natural language is the primary interface. No YAML, no CLI, no model names needed. TAIM works like an experienced team lead you can brief in plain language.
+Natural language is the primary interface. No YAML, no CLI, no model names needed. tAIm works like an experienced team lead you can brief in plain language.
 
 ### 2. Progressive Disclosure
 Everything has smart defaults. Zero configuration needed to start. Want more control? Dive deeper into YAML, CLI, or API. **Simplicity is the default, complexity is opt-in.**
@@ -86,7 +116,7 @@ Everything has smart defaults. Zero configuration needed to start. Want more con
 Humans always have control. Approval gates determine when human confirmation is needed. Time and budget limits prevent uncontrolled execution. "Work on this for 4 hours, then stop" is a first-class feature.
 
 ### 4. Learn by Use
-TAIM improves through usage. Prompt optimization, few-shot learning from memory, accumulated experience. No fine-tuning required.
+tAIm improves through usage. Prompt optimization, few-shot learning from memory, accumulated experience. No fine-tuning required.
 
 ### 5. No Vendor Lock-in
 Any LLM with an API can be used. The router abstracts the provider layer completely. Anthropic, OpenAI, local models via Ollama — switch transparently.
@@ -101,7 +131,7 @@ Everything is stored in human-readable formats: Markdown, YAML, SQLite. No black
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│                       TAIM DASHBOARD                         │
+│                       tAIm DASHBOARD                         │
 │                                                              │
 │  ┌────────────────────────────────────────────────────────┐  │
 │  │              CONVERSATION LAYER                         │  │
@@ -139,7 +169,7 @@ Everything is stored in human-readable formats: Markdown, YAML, SQLite. No black
              ┌─────────────┼──────────────┐
              ▼             ▼              ▼
 ┌─────────────────┐ ┌───────────┐ ┌──────────────┐
-│   TAIM BRAIN    │ │   TAIM    │ │  TAIM RULES  │
+│   tAIm BRAIN    │ │   tAIm    │ │  tAIm RULES  │
 │                 │ │   ROUTER  │ │   ENGINE     │
 │ Three-Layer     │ │           │ │              │
 │ Memory:         │ │ Multi-LLM │ │ Compliance   │
@@ -164,7 +194,7 @@ Everything is stored in human-readable formats: Markdown, YAML, SQLite. No black
 │  LAYER 1: CONVERSATION (for everyone)              │
 │                                                    │
 │  Natural language · Smart defaults                 │
-│  Guided onboarding · TAIM explains what it does    │
+│  Guided onboarding · tAIm explains what it does    │
 │                                                    │
 │  "Create a competitor analysis"                    │
 │  "Stop the team, that's enough"                    │
@@ -186,25 +216,25 @@ Layer 1 is the main entrance. Layer 2 is the escape hatch for experts. Everythin
 ## Key Innovations
 
 ### AI Equalizer
-The fundamental shift: **AI learns every user, not every user learns AI.** A beginner with two weeks of TAIM usage gets results equal to a power user — because the system has learned their needs, preferences, and patterns.
+The fundamental shift: **AI learns every user, not every user learns AI.** A beginner with two weeks of tAIm usage gets results equal to a power user — because the system has learned their needs, preferences, and patterns.
 
 ### Conversation-First Architecture
 Not a chatbot bolted onto a config tool. The entire system is designed around natural language interaction. The Intent Interpreter translates plain speech into structured orchestration commands. Smart Defaults fill in everything the user doesn't specify. Guided Onboarding replaces setup wizards with a conversation.
 
 ### Two-Stage Intent Interpretation
-Most systems use a single LLM call to understand user input. TAIM uses two stages: a fast, cheap classification (Tier 3) that handles 60-70% of messages instantly, and a deep understanding stage (Tier 2) that only activates for complex requests. This mirrors how humans process requests — first categorize, then analyze. The result: ~40% lower interpreter costs with better accuracy where it matters.
+Most systems use a single LLM call to understand user input. tAIm uses two stages: a fast, cheap classification (Tier 3) that handles 60-70% of messages instantly, and a deep understanding stage (Tier 2) that only activates for complex requests. This mirrors how humans process requests — first categorize, then analyze. The result: ~40% lower interpreter costs with better accuracy where it matters.
 
 ### Agents as State Machines
 Every agent runs as an explicit state machine: `PLANNING → EXECUTING → REVIEWING → ITERATING → DONE`. Each state has its own optimized prompt — a "plan your approach" prompt is fundamentally different from a "review your result" prompt. This makes agents debuggable (see what state they're in), controllable (heartbeat can intervene per state), and resumable (state serializes to disk for crash recovery).
 
 ### Token-Budgeted Context Assembly
-Every agent gets a token budget for its context. The Context Assembler prioritizes ruthlessly: task description first, then rules, then relevant memory, then examples — never exceeding the budget. This is fundamentally different from RAG: TAIM selects by relevance to task + agent role + user preferences, not by semantic similarity. No vectors needed.
+Every agent gets a token budget for its context. The Context Assembler prioritizes ruthlessly: task description first, then rules, then relevant memory, then examples — never exceeding the budget. This is fundamentally different from RAG: tAIm selects by relevance to task + agent role + user preferences, not by semantic similarity. No vectors needed.
 
 ### Three-Temperature Memory
 Memory is organized in three layers: **Hot** (current session, always in RAM), **Warm** (user preferences, loaded on demand via INDEX.md), and **Cold** (historical data, accessed only when needed). Memory cost scales with relevance, not with total memory size.
 
 ### Intelligent Model Tiering
-TAIM automatically selects the right model for the right task:
+tAIm automatically selects the right model for the right task:
 - **Tier 1 (Premium):** Complex reasoning, architecture, strategy
 - **Tier 2 (Standard):** Code generation, text processing, analysis
 - **Tier 3 (Economy):** Classification, formatting, routing
@@ -212,10 +242,10 @@ TAIM automatically selects the right model for the right task:
 The user never needs to know about tiering. Power users can override.
 
 ### Transparent Failover with Error-Type Awareness
-Not just "retry then failover." TAIM distinguishes error types: rate limits get retries, safety filters get prompt adjustments, bad formats get format reminders, low quality gets model escalation. Different errors need different responses. When Provider A hits its limit, the router switches transparently to Provider B. All providers down? Local Ollama at $0 cost.
+Not just "retry then failover." tAIm distinguishes error types: rate limits get retries, safety filters get prompt adjustments, bad formats get format reminders, low quality gets model escalation. Different errors need different responses. When Provider A hits its limit, the router switches transparently to Provider B. All providers down? Local Ollama at $0 cost.
 
 ### Prompts as First-Class Citizens
-System prompts are not hardcoded strings — they're versioned YAML files in the TAIM Vault. Editable, auditable, improvable without code changes. This is the foundation for the self-learning system: Phase 2's Learning Loop optimizes prompts, not code. The prompts are the product.
+System prompts are not hardcoded strings — they're versioned YAML files in the tAIm Vault. Editable, auditable, improvable without code changes. This is the foundation for the self-learning system: Phase 2's Learning Loop optimizes prompts, not code. The prompts are the product.
 
 ### Self-Learning Memory
 Based on the [claudianX](https://github.com/reyk-zepper/claudianX) pattern: structured Markdown notes with frontmatter, INDEX.md as entry point, just-in-time retrieval. No Obsidian dependency, no vector databases. Pure filesystem, human-readable, git-versionable.
@@ -224,7 +254,7 @@ Based on the [claudianX](https://github.com/reyk-zepper/claudianX) pattern: stru
 Based on [noRAG](https://github.com/reyk-zepper/noRAG): Documents are compiled into structured knowledge units ahead of time. 80-90% fewer context tokens, no hallucinations at chunk boundaries, exact source references. **Search is a runtime cost. Compilation is a build cost.**
 
 ### Configurable Team Orchestration
-Teams support four patterns — Sequential, Parallel, Pipeline, and Hierarchical — auto-selected based on task analysis. A research task gets parallel researchers feeding into a sequential analyst. A code task gets a sequential plan-code-review pipeline. The user never picks the pattern; TAIM does. Power users can override.
+Teams support four patterns — Sequential, Parallel, Pipeline, and Hierarchical — auto-selected based on task analysis. A research task gets parallel researchers feeding into a sequential analyst. A code task gets a sequential plan-code-review pipeline. The user never picks the pattern; tAIm does. Power users can override.
 
 ### Live Team Observability
 A rich WebSocket event stream lets you watch your team work in real-time. Not "waiting for a response" — seeing agent state transitions, progress updates, budget consumption, and intermediate results as they happen. Every event is typed, timestamped, and loggable for audit.
@@ -244,8 +274,8 @@ A rich WebSocket event stream lets you watch your team work in real-time. Not "w
 
 ## Roadmap
 
-### Phase 1 — Foundation (MVP) `<-- current`
-The core loop works: User describes task -> TAIM assembles team -> Agents work -> Result delivered.
+### Phase 1 — Foundation (MVP) `COMPLETE`
+The core loop works: User describes task -> tAIm assembles team -> Agents work -> Result delivered.
 - Conversation Layer with two-stage Intent Interpreter
 - Guided Onboarding + Smart Defaults
 - Agent Registry + Team Composer with orchestration patterns
@@ -253,11 +283,15 @@ The core loop works: User describes task -> TAIM assembles team -> Agents work -
 - Multi-LLM Router with failover + model tiering + error-type-aware handling
 - Three-temperature Agent Memory (claudianX pattern)
 - Token-budgeted Context Assembly
+- Tool Execution Framework with sandboxing (file I/O, memory, web search/fetch)
+- 5 Built-in Skills (web_research, code_generation, code_review, content_writing, data_analysis)
+- MCP Client Integration (connect external MCP servers for additional tools)
 - Heartbeat Manager (time/budget limits)
-- Token tracking with cost display (always in currency, not just tokens)
+- Token tracking + monthly stats API + pre-call budget enforcement
 - Prompts as versioned vault files
 - React Dashboard with integrated chat + live team observability
-- CLI for power users
+- WebSocket with reconnect + exponential backoff
+- CLI for power users (server, agent, stats, vault)
 
 ### Phase 2 — Intelligence
 The system learns and improves through usage.
@@ -281,15 +315,14 @@ Production-grade for business deployment.
 - SSO (SAML/OIDC)
 - Kubernetes Helm Chart
 - AWS Bedrock / Azure OpenAI native
-- MCP server integration
 - A2A protocol support
 
 ## Building On
 
-TAIM builds on proven, battle-tested components:
+tAIm builds on proven, battle-tested components:
 
 - **[noRAG](https://github.com/reyk-zepper/noRAG)** — Knowledge Compiler. Apache 2.0, production-ready. CKU-based knowledge compilation that replaces RAG entirely.
-- **[claudianX](https://github.com/reyk-zepper/claudianX)** — Memory Pattern. The structured Markdown + INDEX.md + JIT retrieval pattern that powers TAIM's self-learning memory.
+- **[claudianX](https://github.com/reyk-zepper/claudianX)** — Memory Pattern. The structured Markdown + INDEX.md + JIT retrieval pattern that powers tAIm's self-learning memory.
 - **[codian](https://github.com/reyk-zepper/codian)** — Proves the claudianX pattern is agent-agnostic. One vault per agent becomes one namespace per agent.
 
 ## License
@@ -300,10 +333,10 @@ No crippled free tier, no proprietary enterprise extensions. The entire core is 
 
 ## Philosophy
 
-> The future of productivity doesn't belong to those who can prompt the best. It belongs to everyone who has ideas and wants results. TAIM makes the difference between "I know AI" and "AI knows me" irrelevant.
+> The future of productivity doesn't belong to those who can prompt the best. It belongs to everyone who has ideas and wants results. tAIm makes the difference between "I know AI" and "AI knows me" irrelevant.
 
 ---
 
-**TAIM — Team AI Manager**
+**tAIm — Team AI Manager** | [Phase 1 MVP complete](https://github.com/reyk-zepper/TAIM/pulls?q=is%3Amerged) | Apache 2.0
 
 *Because the future of productivity isn't a better chatbot — it's an intelligent team that works for you, no matter how much you know about AI.*

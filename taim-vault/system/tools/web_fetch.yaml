@@ -1,0 +1,11 @@
+name: web_fetch
+description: Fetch a URL and return its text content (HTML stripped to plain text, max 8000 chars)
+requires_approval: false
+source: builtin
+parameters:
+  type: object
+  properties:
+    url:
+      type: string
+      description: URL to fetch
+  required: [url]

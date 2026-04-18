@@ -24,8 +24,27 @@ export default function ChatView() {
     const ws = new WebSocketManager(sessionId)
     wsRef.current = ws
 
-    ws.on('_connected', () => setConnected(true))
+    let wasConnected = false
+    ws.on('_connected', () => {
+      setConnected(true)
+      if (wasConnected) {
+        addMessage({ type: 'system', content: 'Connection restored.' })
+      }
+      wasConnected = true
+    })
+
     ws.on('_disconnected', () => setConnected(false))
+
+    ws.on('_reconnecting', (e) => {
+      addMessage({ type: 'system', content: e.content || 'Reconnecting...' })
+    })
+
+    ws.on('_reconnect_failed', () => {
+      addMessage({
+        type: 'error',
+        content: 'Disconnected from tAIm server. Check that the server is running and refresh the page.',
+      })
+    })
 
     ws.on('thinking', () => setThinking(true))
 

@@ -194,6 +194,8 @@ skills:
   - summarization
   - source_evaluation
 tools:
+  - web_search
+  - web_fetch
   - vault_memory_write
 max_iterations: 3
 requires_approval_for: []
@@ -564,6 +566,57 @@ prompt_template: |
   - Caveats — what the data does NOT tell us
 """
 
+_DEFAULT_TOOL_WEB_SEARCH = """\
+name: web_search
+description: Search the web and return top results with titles, URLs, and snippets
+requires_approval: false
+source: builtin
+parameters:
+  type: object
+  properties:
+    query:
+      type: string
+      description: Search query
+    max_results:
+      type: integer
+      description: Maximum number of results (default 5)
+      default: 5
+  required: [query]
+"""
+
+_DEFAULT_TOOL_WEB_FETCH = """\
+name: web_fetch
+description: Fetch a URL and return its text content (HTML stripped to plain text, max 8000 chars)
+requires_approval: false
+source: builtin
+parameters:
+  type: object
+  properties:
+    url:
+      type: string
+      description: URL to fetch
+  required: [url]
+"""
+
+_DEFAULT_MCP_SERVERS_YAML = """\
+# tAIm — MCP Server Configuration
+# Connect external MCP servers to give agents additional tools.
+
+mcp_servers: []
+
+# Example configurations (uncomment to use):
+#
+# - name: filesystem
+#   command: "npx -y @modelcontextprotocol/server-filesystem /path/to/workspace"
+#   enabled: true
+#
+# - name: github
+#   command: "npx -y @modelcontextprotocol/server-github"
+#   env:
+#     GITHUB_PERSONAL_ACCESS_TOKEN: "${GITHUB_TOKEN}"
+#   enabled: true
+"""
+
 
 class VaultOps:
     """Filesystem operations for the tAIm Vault."""
@@ -665,6 +718,7 @@ class VaultOps:
             "taim.yaml": _DEFAULT_TAIM_YAML,
             "providers.yaml": _DEFAULT_PROVIDERS_YAML,
             "defaults.yaml": _DEFAULT_DEFAULTS_YAML,
+            "mcp-servers.yaml": _DEFAULT_MCP_SERVERS_YAML,
         }
         for filename, content in defaults.items():
             path = self.vault_config.config_dir / filename
@@ -724,6 +778,8 @@ class VaultOps:
             "file_write.yaml": _DEFAULT_TOOL_FILE_WRITE,
             "vault_memory_read.yaml": _DEFAULT_TOOL_VAULT_MEMORY_READ,
             "vault_memory_write.yaml": _DEFAULT_TOOL_VAULT_MEMORY_WRITE,
+            "web_search.yaml": _DEFAULT_TOOL_WEB_SEARCH,
+            "web_fetch.yaml": _DEFAULT_TOOL_WEB_FETCH,
         }
         for filename, content in defaults.items():
             path = tools_dir / filename

@@ -1,0 +1,15 @@
+name: web_search
+description: Search the web and return top results with titles, URLs, and snippets
+requires_approval: false
+source: builtin
+parameters:
+  type: object
+  properties:
+    query:
+      type: string
+      description: Search query
+    max_results:
+      type: integer
+      description: Maximum number of results (default 5)
+      default: 5
+  required: [query]
