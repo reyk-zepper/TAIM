@@ -598,6 +598,31 @@ parameters:
   required: [url]
 """
 
+_DEFAULT_PATTERN_EXTRACTOR_PROMPT = """\
+name: pattern-extractor
+version: 1
+description: Extracts reusable patterns from successful agent runs
+model_tier: tier3_economy
+variables:
+  - task_type
+  - objective
+  - agent_name
+  - result_snippet
+template: |
+  A {{ agent_name }} agent successfully completed a {{ task_type }} task.
+
+  Objective: {{ objective }}
+
+  Result snippet:
+  {{ result_snippet }}
+
+  Extract a 2-3 sentence pattern describing WHAT made this successful.
+  Focus on: approach used, key decisions, output structure.
+  This pattern will help future agents with similar tasks.
+
+  Respond with plain text only (no JSON, no markdown headers).
+"""
+
 _DEFAULT_RULE_SAFETY = """\
 name: default-safety
 description: Default safety and quality rules
@@ -745,6 +770,7 @@ class VaultOps:
             "intent-classifier.yaml": _DEFAULT_INTENT_CLASSIFIER_PROMPT,
             "intent-interpreter.yaml": _DEFAULT_INTENT_INTERPRETER_PROMPT,
             "session-summarizer.yaml": _DEFAULT_SESSION_SUMMARIZER_PROMPT,
+            "pattern-extractor.yaml": _DEFAULT_PATTERN_EXTRACTOR_PROMPT,
         }
         for filename, content in defaults.items():
             path = self.vault_config.prompts_dir / filename
