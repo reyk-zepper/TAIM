@@ -13,6 +13,7 @@ from taim.brain.agent_registry import AgentRegistry
 from taim.brain.agent_run_store import AgentRunStore
 from taim.brain.agent_state_machine import AgentStateMachine, TransitionEvent
 from taim.brain.context_assembler import ContextAssembler
+from taim.brain.iteration_controller import IterationController
 from taim.brain.learning_loop import LearningLoop
 from taim.brain.prompts import PromptLoader
 from taim.brain.skill_registry import SkillRegistry
@@ -47,6 +48,7 @@ class Orchestrator:
         skill_registry: SkillRegistry | None = None,
         context_assembler: ContextAssembler | None = None,
         learning_loop: LearningLoop | None = None,
+        iteration_controller: IterationController | None = None,
     ) -> None:
         self._composer = composer
         self._task_manager = task_manager
@@ -59,6 +61,7 @@ class Orchestrator:
         self._skill_registry = skill_registry
         self._context_assembler = context_assembler or ContextAssembler()
         self._learning_loop = learning_loop
+        self._iteration_controller = iteration_controller
 
     async def execute(
         self,
@@ -125,6 +128,7 @@ class Orchestrator:
                 tool_context=self._tool_context,
                 on_tool_event=on_tool_event,
                 skill_registry=self._skill_registry,
+                iteration_controller=self._iteration_controller,
             )
             run = await sm.run()
         except Exception as e:  # noqa: BLE001 — orchestrator must not crash on agent failure
@@ -234,6 +238,7 @@ class Orchestrator:
                     tool_context=self._tool_context,
                     on_tool_event=on_tool_event,
                     skill_registry=self._skill_registry,
+                    iteration_controller=self._iteration_controller,
                 )
                 run = await sm.run()
             except Exception as e:  # noqa: BLE001
