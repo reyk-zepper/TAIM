@@ -177,8 +177,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # 13b. Context Assembler
     from taim.brain.context_assembler import ContextAssembler
+    from taim.brain.few_shot_store import FewShotStore
 
-    context_assembler = ContextAssembler(memory=memory_manager, rule_engine=rule_engine)
+    few_shot_store = FewShotStore(memory_manager)
+    context_assembler = ContextAssembler(
+        memory=memory_manager,
+        rule_engine=rule_engine,
+        few_shot_store=few_shot_store,
+    )
 
     # 13c. Learning Loop
     from taim.brain.feedback import FeedbackCollector
@@ -189,7 +195,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     feedback_collector = FeedbackCollector()
     pattern_extractor = PatternExtractor(llm_router, prompt_loader)
     learning_store_inst = LearningStore(memory_manager)
-    learning_loop = LearningLoop(feedback_collector, pattern_extractor, learning_store_inst)
+    learning_loop = LearningLoop(
+        feedback_collector,
+        pattern_extractor,
+        learning_store_inst,
+        few_shot_store=few_shot_store,
+    )
 
     app.state.learning_loop = learning_loop
     logger.info("learning_loop.ready")

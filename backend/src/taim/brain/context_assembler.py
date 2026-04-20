@@ -5,6 +5,7 @@ from __future__ import annotations
 import structlog
 import tiktoken
 
+from taim.brain.few_shot_store import FewShotStore
 from taim.brain.memory import MemoryManager
 from taim.brain.rule_engine import RuleEngine
 from taim.models.agent import Agent
@@ -39,9 +40,11 @@ class ContextAssembler:
         self,
         memory: MemoryManager | None = None,
         rule_engine: RuleEngine | None = None,
+        few_shot_store: FewShotStore | None = None,
     ) -> None:
         self._memory = memory
         self._rule_engine = rule_engine
+        self._few_shot_store = few_shot_store
 
     async def assemble(
         self,
@@ -98,6 +101,24 @@ class ContextAssembler:
                     used += tokens
             except Exception:
                 logger.exception("context_assembler.memory_error")
+
+        # 2.5 Few-shot examples (between memory and team context)
+        if self._few_shot_store and agent.skills:
+            try:
+                task_type_hint = task_description.split()[0].lower() if task_description else ""
+                examples = await self._few_shot_store.find_examples(
+                    task_type=task_type_hint,
+                    agent_name=agent.name,
+                )
+                for i, example in enumerate(examples):
+                    example_text = f"[Example {i + 1}]\n{example}"
+                    tokens = count_tokens(example_text)
+                    if used + tokens > budget:
+                        break
+                    parts.append(example_text)
+                    used += tokens
+            except Exception:
+                logger.exception("context_assembler.few_shot_error")
 
         # 3. Previous agent results (team context)
         if previous_results:
