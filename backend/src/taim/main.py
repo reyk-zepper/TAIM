@@ -115,12 +115,25 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     tool_executor.register("web_search", web_search)
     tool_executor.register("web_fetch", web_fetch)
 
+    # 11c. Knowledge tools (optional noRAG integration)
+    from taim.brain.knowledge import KnowledgeManager
+    from taim.orchestrator.builtin_tools.knowledge_tools import knowledge_query
+
+    # CKUs directory: taim-vault/knowledge/ (user compiles documents here)
+    ckus_dir = system_config.vault.vault_root / "knowledge"
+    knowledge_manager = KnowledgeManager(ckus_dir=ckus_dir if ckus_dir.exists() else None)
+    tool_executor.register("knowledge_query", knowledge_query)
+
     app.state.tool_registry = tool_registry
     app.state.tool_executor = tool_executor
     app.state.tool_context = {
         "allowed_roots": [system_config.vault.vault_root],
         "memory_manager": memory_manager,
+        "knowledge_manager": knowledge_manager,
     }
+
+    if knowledge_manager.available:
+        logger.info("knowledge.ready")
 
     logger.info("tools.loaded", count=len(tool_executor.list_tools()))
 

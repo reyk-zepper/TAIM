@@ -1,0 +1,15 @@
+name: knowledge_query
+description: Query compiled knowledge from documents using noRAG (no RAG, no vectors — compiled knowledge units)
+requires_approval: false
+source: builtin
+parameters:
+  type: object
+  properties:
+    question:
+      type: string
+      description: Natural language question to answer from compiled knowledge
+    top_k:
+      type: integer
+      description: Maximum number of knowledge units to consider (default 5)
+      default: 5
+  required: [question]

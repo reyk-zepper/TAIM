@@ -197,6 +197,7 @@ tools:
   - web_search
   - web_fetch
   - vault_memory_write
+  - knowledge_query
 max_iterations: 3
 requires_approval_for: []
 """
@@ -266,6 +267,7 @@ skills:
 tools:
   - file_read
   - vault_memory_read
+  - knowledge_query
 max_iterations: 3
 requires_approval_for: []
 """
@@ -603,6 +605,24 @@ parameters:
   required: [url]
 """
 
+_DEFAULT_TOOL_KNOWLEDGE_QUERY = """\
+name: knowledge_query
+description: Query compiled knowledge via noRAG (compiled knowledge units, no vectors)
+requires_approval: false
+source: builtin
+parameters:
+  type: object
+  properties:
+    question:
+      type: string
+      description: Natural language question to answer from compiled knowledge
+    top_k:
+      type: integer
+      description: Maximum number of knowledge units to consider (default 5)
+      default: 5
+  required: [question]
+"""
+
 _DEFAULT_PATTERN_EXTRACTOR_PROMPT = """\
 name: pattern-extractor
 version: 1
@@ -825,6 +845,7 @@ class VaultOps:
             "vault_memory_write.yaml": _DEFAULT_TOOL_VAULT_MEMORY_WRITE,
             "web_search.yaml": _DEFAULT_TOOL_WEB_SEARCH,
             "web_fetch.yaml": _DEFAULT_TOOL_WEB_FETCH,
+            "knowledge_query.yaml": _DEFAULT_TOOL_KNOWLEDGE_QUERY,
         }
         for filename, content in defaults.items():
             path = tools_dir / filename
