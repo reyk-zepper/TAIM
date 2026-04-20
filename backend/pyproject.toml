@@ -38,6 +38,9 @@ dev = [
     "httpx>=0.27.0",
     "ruff>=0.5.0",
 ]
+norag = [
+    "norag>=1.0.0",
+]
 
 [project.scripts]
 taim = "taim.cli.main:app"
@@ -53,6 +56,9 @@ packages = ["src/taim"]
 testpaths = ["../tests/backend"]
 asyncio_mode = "auto"
 pythonpath = ["../tests/backend"]
+
+[tool.uv.sources]
+norag = { path = "../../noRAG", editable = true }
 
 [tool.ruff]
 target-version = "py311"
