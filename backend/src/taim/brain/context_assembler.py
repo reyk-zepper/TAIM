@@ -6,6 +6,7 @@ import structlog
 import tiktoken
 
 from taim.brain.memory import MemoryManager
+from taim.brain.rule_engine import RuleEngine
 from taim.models.agent import Agent
 from taim.models.chat import TaskConstraints
 
@@ -34,8 +35,13 @@ class ContextAssembler:
     3. Previous agent results (if team execution, truncated)
     """
 
-    def __init__(self, memory: MemoryManager | None = None) -> None:
+    def __init__(
+        self,
+        memory: MemoryManager | None = None,
+        rule_engine: RuleEngine | None = None,
+    ) -> None:
         self._memory = memory
+        self._rule_engine = rule_engine
 
     async def assemble(
         self,
@@ -53,6 +59,18 @@ class ContextAssembler:
         budget = _TIER_BUDGETS.get(tier, 2000)
         used = 0
         parts: list[str] = []
+
+        # 0. Active rules (highest priority)
+        if self._rule_engine:
+            rule_set = self._rule_engine.get_active_rules(
+                agent_name=agent.name,
+            )
+            rules_text = self._rule_engine.compile_for_context(rule_set)
+            if rules_text:
+                tokens = count_tokens(rules_text)
+                if used + tokens <= budget:
+                    parts.append(rules_text)
+                    used += tokens
 
         # 1. Constraints
         if constraints:

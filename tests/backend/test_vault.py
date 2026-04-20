@@ -176,3 +176,11 @@ class TestDefaultSkills:
         skills_dir = ops.vault_config.vault_root / "system" / "skills"
         for name in ["web_research", "code_generation", "code_review", "content_writing", "data_analysis"]:
             assert (skills_dir / f"{name}.yaml").exists()
+
+
+class TestDefaultRules:
+    def test_creates_default_safety_rule(self, tmp_path: Path) -> None:
+        ops = VaultOps(tmp_path / "vault")
+        ops.ensure_vault()
+        path = ops.vault_config.rules_dir / "compliance" / "default.yaml"
+        assert path.exists()

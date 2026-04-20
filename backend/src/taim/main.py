@@ -159,10 +159,26 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     task_manager = TaskManager(db)
     team_composer = TeamComposer(registry)
 
-    # 13a. Context Assembler
+    # 13a. Rule Engine
+    from taim.brain.rule_engine import RuleEngine
+
+    rule_engine = RuleEngine(
+        rules_dir=system_config.vault.rules_dir,
+        memory=memory_manager,
+    )
+    rule_engine.load()
+    try:
+        await rule_engine.load_memory_rules()
+    except Exception:
+        logger.exception("rule_engine.memory_load_error")
+
+    app.state.rule_engine = rule_engine
+    logger.info("rules.loaded", count=len(rule_engine.list_rules()))
+
+    # 13b. Context Assembler
     from taim.brain.context_assembler import ContextAssembler
 
-    context_assembler = ContextAssembler(memory=memory_manager)
+    context_assembler = ContextAssembler(memory=memory_manager, rule_engine=rule_engine)
 
     orchestrator = Orchestrator(
         composer=team_composer,
@@ -308,6 +324,10 @@ def create_app() -> FastAPI:
     from taim.api.setup import router as setup_router
 
     app.include_router(setup_router)
+
+    from taim.api.rules import router as rules_router
+
+    app.include_router(rules_router)
 
     return app
 
