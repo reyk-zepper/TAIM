@@ -205,6 +205,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.learning_loop = learning_loop
     logger.info("learning_loop.ready")
 
+    # 13c. Iteration Controller
+    from taim.brain.iteration_controller import IterationController
+
+    iteration_controller = IterationController(rule_engine=rule_engine)
+    app.state.iteration_controller = iteration_controller
+
     orchestrator = Orchestrator(
         composer=team_composer,
         task_manager=task_manager,
@@ -217,6 +223,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         skill_registry=skill_registry,
         context_assembler=context_assembler,
         learning_loop=learning_loop,
+        iteration_controller=iteration_controller,
     )
 
     app.state.task_manager = task_manager

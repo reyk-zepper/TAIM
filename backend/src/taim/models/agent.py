@@ -78,3 +78,7 @@ class ReviewResult(BaseModel):
 
     quality_ok: bool
     feedback: str
+    completeness: float = 1.0  # 0.0 to 1.0
+    accuracy: float = 1.0  # 0.0 to 1.0
+    relevance: float = 1.0  # 0.0 to 1.0
+    rule_compliance: bool = True  # Were all mandatory rules followed?
