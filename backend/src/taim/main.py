@@ -172,6 +172,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     task_manager = TaskManager(db)
     team_composer = TeamComposer(registry)
 
+    # 13d. SWAT Builder (enhanced team composition)
+    from taim.orchestrator.swat_builder import SwatBuilder
+
+    swat_builder = SwatBuilder(
+        registry=registry,
+        router=llm_router,
+        prompt_loader=prompt_loader,
+        fallback_composer=team_composer,
+    )
+    app.state.swat_builder = swat_builder
+
     # 13a. Rule Engine
     from taim.brain.rule_engine import RuleEngine
 

@@ -623,6 +623,42 @@ parameters:
   required: [question]
 """
 
+_DEFAULT_TEAM_COMPOSER_PROMPT = """\
+name: team-composer
+version: 1
+description: LLM-based team composition — selects agents for a task
+model_tier: tier3_economy
+variables:
+  - task_type
+  - objective
+  - available_agents
+  - parameters
+template: |
+  You are tAIm's team composer. Select the best agents for this task.
+
+  Task type: {{ task_type }}
+  Objective: {{ objective }}
+  Parameters: {{ parameters }}
+
+  Available agents:
+  {{ available_agents }}
+
+  Rules:
+  - Select 1-4 agents (prefer fewer for simple tasks)
+  - Each agent should have a clear role
+  - Order matters: agents execute sequentially, each building on the previous
+  - Don't select agents whose skills don't match the task
+
+  Respond with JSON only:
+  {
+    "agents": [
+      {"role": "lead_researcher", "agent_name": "researcher"},
+      {"role": "analyst", "agent_name": "analyst"}
+    ],
+    "reasoning": "Brief explanation of why these agents"
+  }
+"""
+
 _DEFAULT_PATTERN_EXTRACTOR_PROMPT = """\
 name: pattern-extractor
 version: 1
@@ -796,6 +832,7 @@ class VaultOps:
             "intent-interpreter.yaml": _DEFAULT_INTENT_INTERPRETER_PROMPT,
             "session-summarizer.yaml": _DEFAULT_SESSION_SUMMARIZER_PROMPT,
             "pattern-extractor.yaml": _DEFAULT_PATTERN_EXTRACTOR_PROMPT,
+            "team-composer.yaml": _DEFAULT_TEAM_COMPOSER_PROMPT,
         }
         for filename, content in defaults.items():
             path = self.vault_config.prompts_dir / filename

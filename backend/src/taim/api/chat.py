@@ -131,8 +131,12 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str) -> None:
                 and result.classification.category == IntentCategory.NEW_TASK
                 and not result.needs_followup
             ):
-                # Compose team
-                slots = composer.compose_team(result.intent)
+                # Compose team — prefer SwatBuilder (LLM-assisted) over rule-based fallback
+                swat_builder = getattr(websocket.app.state, "swat_builder", None)
+                if swat_builder:
+                    slots = await swat_builder.build_team(result.intent)
+                else:
+                    slots = composer.compose_team(result.intent)
 
                 if not slots:
                     hot.append_message(
