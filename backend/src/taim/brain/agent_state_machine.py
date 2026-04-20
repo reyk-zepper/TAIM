@@ -14,6 +14,7 @@ from jinja2.sandbox import SandboxedEnvironment
 from pydantic import BaseModel, ValidationError
 
 from taim.brain.agent_run_store import AgentRunStore
+from taim.brain.iteration_controller import IterationController
 from taim.brain.prompts import PromptLoader
 from taim.brain.skill_registry import SkillRegistry
 from taim.errors import AllProvidersFailed, PromptNotFoundError
@@ -66,6 +67,7 @@ class AgentStateMachine:
         on_tool_event: Callable[[ToolExecutionEvent], Awaitable[None]] | None = None,
         run_id: str | None = None,
         skill_registry: SkillRegistry | None = None,
+        iteration_controller: IterationController | None = None,
     ) -> None:
         self._agent = agent
         self._router = router
@@ -81,6 +83,7 @@ class AgentStateMachine:
         self._tool_context = tool_context
         self._on_tool_event = on_tool_event
         self._skill_registry = skill_registry
+        self._iteration_controller = iteration_controller
         self._state = AgentState(
             agent_name=agent.name,
             run_id=run_id or str(uuid4()),
@@ -293,11 +296,16 @@ class AgentStateMachine:
             logger.exception("tool_event.emit_error", run_id=self._state.run_id)
 
     async def _do_reviewing(self) -> None:
+        review_context = ""
+        if self._iteration_controller:
+            review_context = self._iteration_controller.build_review_context(self._agent)
+
         prompt = await self._load_state_prompt(
             AgentStateEnum.REVIEWING,
             {
                 "task_description": self._task_description,
                 "current_result": self._state.current_result,
+                "review_context": review_context,
             },
         )
         response = await self._call_llm(
@@ -317,18 +325,32 @@ class AgentStateMachine:
 
         self._state.review_feedback = review.feedback
 
-        if review.quality_ok:
-            await self._transition(AgentStateEnum.DONE, "review_passed")
-        elif self._state.iteration >= self._agent.max_iterations:
-            await self._transition(
-                AgentStateEnum.DONE,
-                f"max_iterations_reached_{self._agent.max_iterations}",
+        if self._iteration_controller:
+            should_iter, reason = self._iteration_controller.should_iterate(
+                review,
+                self._state.iteration,
+                self._agent.max_iterations,
+                self._agent,
             )
+            if not should_iter:
+                await self._transition(AgentStateEnum.DONE, reason)
+            else:
+                self._state.review_feedback = review.feedback
+                await self._transition(AgentStateEnum.ITERATING, reason)
         else:
-            await self._transition(
-                AgentStateEnum.ITERATING,
-                "review_failed_iterating",
-            )
+            # Fallback: original simple logic
+            if review.quality_ok:
+                await self._transition(AgentStateEnum.DONE, "review_passed")
+            elif self._state.iteration >= self._agent.max_iterations:
+                await self._transition(
+                    AgentStateEnum.DONE,
+                    f"max_iterations_reached_{self._agent.max_iterations}",
+                )
+            else:
+                await self._transition(
+                    AgentStateEnum.ITERATING,
+                    "review_failed_iterating",
+                )
 
     async def _do_iterating(self) -> None:
         self._state.iteration += 1
