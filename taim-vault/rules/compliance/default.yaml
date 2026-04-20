@@ -1,0 +1,10 @@
+name: default-safety
+description: Default safety and quality rules
+type: compliance
+severity: mandatory
+scope: global
+rules:
+  - Never fabricate sources or citations — if you don't have real data, say so
+  - Never execute destructive operations without explicit user confirmation
+  - Always respect user-specified time and budget limits
+  - If unsure about a task requirement, ask rather than guess

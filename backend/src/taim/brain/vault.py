@@ -598,6 +598,19 @@ parameters:
   required: [url]
 """
 
+_DEFAULT_RULE_SAFETY = """\
+name: default-safety
+description: Default safety and quality rules
+type: compliance
+severity: mandatory
+scope: global
+rules:
+  - Never fabricate sources or citations — if you don't have real data, say so
+  - Never execute destructive operations without explicit user confirmation
+  - Always respect user-specified time and budget limits
+  - If unsure about a task requirement, ask rather than guess
+"""
+
 _DEFAULT_MCP_SERVERS_YAML = """\
 # tAIm — MCP Server Configuration
 # Connect external MCP servers to give agents additional tools.
@@ -665,6 +678,7 @@ class VaultOps:
         self._ensure_default_state_prompts()
         self._ensure_default_tools()
         self._ensure_default_skills()
+        self._ensure_default_rules()
 
     def load_raw_yaml(self, filename: str) -> dict:
         """Load a YAML file from the config directory."""
@@ -801,3 +815,11 @@ class VaultOps:
             path = skills_dir / filename
             if not path.exists():
                 path.write_text(content, encoding="utf-8")
+
+    def _ensure_default_rules(self) -> None:
+        """Seed default compliance rule YAML if not already present."""
+        compliance_dir = self.vault_config.rules_dir / "compliance"
+        compliance_dir.mkdir(parents=True, exist_ok=True)
+        path = compliance_dir / "default.yaml"
+        if not path.exists():
+            path.write_text(_DEFAULT_RULE_SAFETY, encoding="utf-8")
