@@ -1,0 +1,22 @@
+name: pattern-extractor
+version: 1
+description: Extracts reusable patterns from successful agent runs
+model_tier: tier3_economy
+variables:
+  - task_type
+  - objective
+  - agent_name
+  - result_snippet
+template: |
+  A {{ agent_name }} agent successfully completed a {{ task_type }} task.
+
+  Objective: {{ objective }}
+
+  Result snippet:
+  {{ result_snippet }}
+
+  Extract a 2-3 sentence pattern describing WHAT made this successful.
+  Focus on: approach used, key decisions, output structure.
+  This pattern will help future agents with similar tasks.
+
+  Respond with plain text only (no JSON, no markdown headers).
