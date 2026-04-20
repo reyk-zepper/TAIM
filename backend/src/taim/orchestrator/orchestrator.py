@@ -13,6 +13,7 @@ from taim.brain.agent_registry import AgentRegistry
 from taim.brain.agent_run_store import AgentRunStore
 from taim.brain.agent_state_machine import AgentStateMachine, TransitionEvent
 from taim.brain.context_assembler import ContextAssembler
+from taim.brain.learning_loop import LearningLoop
 from taim.brain.prompts import PromptLoader
 from taim.brain.skill_registry import SkillRegistry
 from taim.models.agent import AgentStateEnum
@@ -45,6 +46,7 @@ class Orchestrator:
         tool_context: dict[str, Any] | None = None,
         skill_registry: SkillRegistry | None = None,
         context_assembler: ContextAssembler | None = None,
+        learning_loop: LearningLoop | None = None,
     ) -> None:
         self._composer = composer
         self._task_manager = task_manager
@@ -56,6 +58,7 @@ class Orchestrator:
         self._tool_context = tool_context or {}
         self._skill_registry = skill_registry
         self._context_assembler = context_assembler or ContextAssembler()
+        self._learning_loop = learning_loop
 
     async def execute(
         self,
@@ -146,6 +149,14 @@ class Orchestrator:
             tokens=tokens,
             cost_eur=run.cost_eur,
         )
+
+        # Fire-and-forget learning
+        if self._learning_loop and status == TaskStatus.COMPLETED:
+            import asyncio
+
+            asyncio.create_task(
+                self._learning_loop.process_completed_task(run, intent, run.result_content)
+            )
 
         return TaskExecutionResult(
             task_id=task_id,
@@ -265,6 +276,24 @@ class Orchestrator:
             TaskStatus.COMPLETED,
             cost_eur=total_cost,
         )
+
+        # Fire-and-forget learning
+        if self._learning_loop:
+            import asyncio
+
+            # Build a minimal AgentRun proxy for the final agent's result
+            from taim.models.agent import AgentRun as _AgentRun
+
+            _final_run = _AgentRun(
+                run_id=plan.task_id,
+                agent_name=final_agent,
+                task_id=plan.task_id,
+                final_state=AgentStateEnum.DONE,
+                result_content=final_result,
+            )
+            asyncio.create_task(
+                self._learning_loop.process_completed_task(_final_run, intent, final_result)
+            )
 
         return TaskExecutionResult(
             task_id=plan.task_id,
