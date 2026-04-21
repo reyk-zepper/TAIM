@@ -293,14 +293,14 @@ The core loop works: User describes task -> tAIm assembles team -> Agents work -
 - WebSocket with reconnect + exponential backoff
 - CLI for power users (server, agent, stats, vault)
 
-### Phase 2 — Intelligence
+### Phase 2 — Intelligence `COMPLETE`
 The system learns and improves through usage.
-- noRAG integration (Compiled Knowledge)
-- Learning Loop + Prompt Optimization
-- Few-Shot Learning from Memory
-- Iteration Controller (automated review rounds)
-- SWAT Builder (automatic team spawning)
-- Rules Engine (compliance via conversation or YAML)
+- Rules Engine (compliance rules via YAML or conversation, injected as highest-priority context)
+- Learning Loop (auto-scores agent runs, extracts success patterns, stores for future use)
+- Few-Shot Learning (high-scoring task→result pairs become prompt examples)
+- Iteration Controller (quality dimensions: completeness, accuracy, relevance, rule compliance)
+- noRAG integration (compiled knowledge query tool — optional, no vectors)
+- SWAT Builder (LLM-assisted dynamic team composition with rule-based fallback)
 
 ### Phase 3 — Scale
 Multi-user, enterprise readiness, hosted deployment.
@@ -337,6 +337,6 @@ No crippled free tier, no proprietary enterprise extensions. The entire core is 
 
 ---
 
-**tAIm — Team AI Manager** | [Phase 1 MVP complete](https://github.com/reyk-zepper/TAIM/pulls?q=is%3Amerged) | Apache 2.0
+**tAIm — Team AI Manager** | [Phase 1 + 2 complete](https://github.com/reyk-zepper/TAIM/pulls?q=is%3Amerged) | Apache 2.0
 
 *Because the future of productivity isn't a better chatbot — it's an intelligent team that works for you, no matter how much you know about AI.*
